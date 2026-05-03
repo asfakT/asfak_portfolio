@@ -1,0 +1,101 @@
+export const featuredProjects = [
+  {
+    id: 1,
+    title: 'WorksLayr — Workforce Management Platform',
+    description:
+      'A full-featured SaaS platform for managing distributed workforces — shift scheduling, real-time attendance tracking, payroll automation, and analytics dashboards.',
+    longDescription:
+      'Built a scalable multi-tenant SaaS from scratch with Laravel API + React frontend. Features include role-based access control, live WebSocket notifications, automated PDF payslip generation, and comprehensive reporting.',
+    features: [
+      'Multi-tenant architecture with isolated data',
+      'Real-time notifications via WebSockets (Pusher)',
+      'Automated payroll & payslip PDF generation',
+      'Interactive analytics dashboard with Chart.js',
+      'Role-based access: Admin, Manager, Employee',
+    ],
+    tech: ['Laravel', 'React', 'MySQL', 'Redis', 'Pusher', 'Tailwind CSS', 'Chart.js'],
+    github: 'https://github.com',
+    live: 'https://workslayr.com',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
+    tag: 'Full Stack',
+    color: 'blue',
+  },
+  {
+    id: 2,
+    title: 'ML-Powered Crop Disease Detection',
+    description:
+      'A deep learning system that identifies crop diseases from leaf images using CNN architectures, achieving 94%+ accuracy across 38 plant disease classes.',
+    longDescription:
+      'Trained multiple CNN architectures (ResNet50, EfficientNet) on the PlantVillage dataset. Built a REST API with FastAPI and a React frontend for real-time image upload and prediction.',
+    features: [
+      '94.3% accuracy on PlantVillage benchmark',
+      'Transfer learning with ResNet50 / EfficientNet',
+      'Real-time image inference via FastAPI',
+      'Grad-CAM visualization for model explainability',
+      'React frontend with drag-and-drop upload',
+    ],
+    tech: ['Python', 'PyTorch', 'FastAPI', 'React', 'OpenCV', 'Pandas', 'scikit-learn'],
+    github: 'https://github.com',
+    live: null,
+    image: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=800&q=80',
+    tag: 'ML / Research',
+    color: 'red',
+  },
+];
+
+export const otherProjects = [
+  {
+    id: 3,
+    title: 'Competitive Programming Judge',
+    description: 'Online judge with real-time code execution, test case management, and contest timer built with Laravel + React.',
+    tech: ['Laravel', 'React', 'Docker', 'PostgreSQL'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'Full Stack',
+  },
+  {
+    id: 4,
+    title: 'Real-Time Chat App',
+    description: 'WebSocket-powered chat with rooms, private messaging, file sharing, and read receipts.',
+    tech: ['Node.js', 'Socket.io', 'React', 'MongoDB'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'Backend',
+  },
+  {
+    id: 5,
+    title: 'Sentiment Analysis Dashboard',
+    description: 'NLP pipeline for Twitter sentiment analysis with interactive real-time charts and keyword tracking.',
+    tech: ['Python', 'BERT', 'FastAPI', 'React', 'D3.js'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'ML / NLP',
+  },
+  {
+    id: 6,
+    title: 'URL Shortener & Analytics',
+    description: 'High-performance URL shortener with click analytics, geolocation tracking, and QR code generation.',
+    tech: ['Laravel', 'Redis', 'React', 'MySQL'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'Full Stack',
+  },
+  {
+    id: 7,
+    title: 'Graph Algorithm Visualizer',
+    description: 'Interactive visualizer for BFS, DFS, Dijkstra, A* and other graph algorithms with step-by-step animation.',
+    tech: ['React', 'TypeScript', 'Canvas API'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'Algorithms',
+  },
+  {
+    id: 8,
+    title: 'E-commerce REST API',
+    description: 'Production-ready REST API with payment integration, inventory management, order tracking, and admin panel.',
+    tech: ['Laravel', 'Stripe', 'MySQL', 'Redis', 'Swagger'],
+    github: 'https://github.com',
+    live: null,
+    tag: 'Backend',
+  },
+];
