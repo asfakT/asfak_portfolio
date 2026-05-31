@@ -8,27 +8,35 @@ import Badge from '../ui/Badge';
 const education = [
   {
     degree: 'B.Sc. in Computer Science & Engineering',
-    institution: 'University of Dhaka',
-    period: '2019 — 2023',
-    gpa: '3.72 / 4.00',
-    highlights: ["Dean's List 4 semesters", 'Thesis: ML for Crop Disease Detection', 'CS Club President'],
+    institution: 'Gopalganj Science and Technology University (GSTU), Gopalganj',
+    period: '2020 — 2024',
+    // gpa: 'CGPA 3.13 / 4.00',
+    highlights: ['Graduated Dec 2024', '2 Research Papers (In Press + Under Review)', '3200+ CP problems solved'],
     color: 'blue',
   },
   {
     degree: 'Higher Secondary Certificate (HSC)',
-    institution: 'Dhaka College, Science',
-    period: '2017 — 2019',
-    gpa: 'GPA 5.00 / 5.00',
-    highlights: ['Top 1% nationally', 'Mathematics & Physics distinction'],
+    institution: 'Gridakalindia Hazera Hasmat University College, Faridganj, Chandpur',
+    period: '—',
+    gpa: null,
+    highlights: [],
     color: 'red',
+  },
+  {
+    degree: 'Secondary School Certificate (SSC)',
+    institution: "Raipur Government Merchant's Academy, Raipur, Lakshmipur",
+    period: '—',
+    gpa: null,
+    highlights: [],
+    color: 'blue',
   },
 ];
 
 const personalInfo = [
-  { icon: FiMapPin, label: 'Location', value: 'Dhaka, Bangladesh' },
-  { icon: FiMail, label: 'Email', value: 'asfak.shahrier@workslayr.com' },
+  { icon: FiMapPin, label: 'Location', value: 'Lakshmipur, Bangladesh' },
+  { icon: FiMail, label: 'Email', value: 'shahrierasfak27@gmail.com' },
   { icon: FiCalendar, label: 'Available', value: 'Immediately' },
-  { icon: FiBook, label: 'Goal', value: 'MSc in Europe (2025)' },
+  { icon: FiBook, label: 'Goal', value: 'MSc in Europe (AI/ML)' },
 ];
 
 export default function About() {
@@ -123,21 +131,21 @@ export default function About() {
         >
           <div className="space-y-5 text-gray-300 leading-relaxed text-base md:text-lg">
             <p>
-              I'm a Full Stack Software Engineer with a strong foundation in computer science, competitive programming,
-              and machine learning research. I specialize in building scalable backend systems with{' '}
-              <span className="text-blue-400 font-semibold">Laravel</span> and crafting modern frontends with{' '}
-              <span className="text-blue-400 font-semibold">React</span>.
+              I'm a Full Stack Software Engineer and ML Researcher, building production systems with{' '}
+              <span className="text-blue-400 font-semibold">Laravel</span>,{' '}
+              <span className="text-blue-400 font-semibold">Angular</span>, and{' '}
+              <span className="text-blue-400 font-semibold">Django</span> — and integrating AI via OpenAI and Gemini APIs.
             </p>
             <p>
               My competitive programming journey — solving{' '}
-              <span className="text-white font-bold">3200+ problems</span> across Codeforces, LeetCode, and AtCoder —
+              <span className="text-white font-bold">3200+ problems</span> across Codeforces, LeetCode, CodeChef, and AtCoder —
               sharpened my algorithmic thinking and ability to write optimized, correct code under pressure.
             </p>
             <p>
-              I've published research on deep learning for agricultural disease detection and NLP for low-resource languages.
-              Currently, I'm preparing for{' '}
-              <span className="text-white font-bold">MSc programs in Europe</span> with a focus on AI/ML,
-              while continuing to grow professionally in industry.
+              I've authored 2 research papers: one{' '}
+              <span className="text-white font-bold">In Press</span> at Communications in Software and Systems (NPM link sharing),
+              and one <span className="text-white font-bold">Under Review</span> at IEEE (ML career prediction for CSE students).
+              Targeting <span className="text-white font-bold">MSc programs in Europe</span> with AI/ML focus.
             </p>
           </div>
 
@@ -167,7 +175,7 @@ export default function About() {
           >
             <p className="text-blue-400 text-xs font-mono font-semibold mb-3 uppercase tracking-widest">Current Focus</p>
             <div className="flex flex-wrap gap-2">
-              {['MSc Applications', 'System Design', 'Open Source', 'ML Research'].map((tag) => (
+              {['MSc Applications', 'AI Integration', 'Competitive Programming', 'ML Research'].map((tag) => (
                 <Badge key={tag} color="blue" size="md">{tag}</Badge>
               ))}
             </div>
@@ -175,7 +183,7 @@ export default function About() {
         </motion.div>
       </div>
 
-      {/* Education timeline */}
+      {/* Education */}
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -187,37 +195,64 @@ export default function About() {
           Education
         </h3>
 
-        <div className="grid md:grid-cols-2 gap-5">
-          {education.map((edu, idx) => (
-            <motion.div
-              key={edu.degree}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: idx * 0.15 }}
-              className="p-6 rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
-              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div>
-                  <h4 className="text-white font-bold text-base leading-snug">{edu.degree}</h4>
-                  <p className="text-gray-400 text-sm mt-1">{edu.institution}</p>
-                </div>
-                <Badge color={edu.color === 'blue' ? 'blue' : 'red'} size="sm">{edu.period}</Badge>
+        <div className="space-y-4">
+          {/* BSc — primary full-width card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="p-6 rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
+            style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+              <div>
+                <h4 className="text-white font-bold text-base leading-snug">{education[0].degree}</h4>
+                <p className="text-gray-400 text-sm mt-1">{education[0].institution}</p>
               </div>
-              <p className={`text-lg font-extrabold mb-3 ${edu.color === 'blue' ? 'text-blue-400' : 'text-red-400'}`}>
-                {edu.gpa}
-              </p>
-              <ul className="space-y-1.5">
-                {edu.highlights.map((h) => (
-                  <li key={h} className="text-gray-400 text-sm flex items-center gap-2.5">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${edu.color === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`} />
-                    {h}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
+              <Badge color="blue" size="sm">{education[0].period}</Badge>
+            </div>
+            {education[0].gpa && <p className="text-blue-400 text-lg font-extrabold mb-3">{education[0].gpa}</p>}
+            <ul className="flex flex-wrap gap-x-8 gap-y-1.5">
+              {education[0].highlights.map((h) => (
+                <li key={h} className="text-gray-400 text-sm flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* HSC + SSC — compact side by side */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            {education.slice(1).map((edu, idx) => (
+              <motion.div
+                key={edu.degree}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.1 }}
+                className="p-5 rounded-2xl border transition-all duration-300 hover:border-blue-500/20"
+                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.07)' }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{
+                      background: edu.color === 'blue' ? 'rgba(59,130,246,0.12)' : 'rgba(239,68,68,0.12)',
+                      border: edu.color === 'blue' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(239,68,68,0.25)',
+                    }}
+                  >
+                    <FiBook size={14} className={edu.color === 'blue' ? 'text-blue-400' : 'text-red-400'} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm leading-snug">{edu.degree}</p>
+                    <p className="text-gray-500 text-xs mt-1 leading-relaxed">{edu.institution}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </motion.div>
     </SectionWrapper>

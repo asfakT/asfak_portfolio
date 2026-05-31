@@ -7,8 +7,9 @@ Complete reference for AI-assisted development of Asfak Shahrier's portfolio sit
 ## Owner
 
 - **Name:** Asfak Shahrier
-- **Email:** asfak.shahrier@workslayr.com
-- **Role:** Full Stack Software Engineer (Laravel + React), Competitive Programmer, ML Researcher
+- **Email (main):** shahrierasfak27@gmail.com | asfak.shahrier@workslayr.com (work/portfolio)
+- **Role:** Full Stack Software Engineer (Laravel, Angular, React, Django), Competitive Programmer, ML Researcher, AI Integration
+- **Education:** B.Sc. CSE — Gopalganj Science and Technology University (GSTU), CGPA 3.13/4.00, Dec 2024
 - **Goal:** MSc in Europe (AI/ML focus) + Top tech company roles
 
 ---
@@ -49,9 +50,9 @@ npm run preview  # Preview production build
     │   └── about_us_image.jpeg   ← About section photo (tall card, 340×420)
     │
     ├── data/                     ← ALL CONTENT LIVES HERE — edit these to update text
-    │   ├── projects.js           ← featuredProjects (2), otherProjects (6)
-    │   ├── experience.js         ← workExperience (3), cpExperience (4 platforms), cpStats
-    │   ├── skills.js             ← skillCategories (4 groups), techBadges (pill cloud)
+    │   ├── projects.js           ← featuredProjects (2), otherProjects (3)
+    │   ├── experience.js         ← workExperience (2), cpExperience (4 platforms), cpStats
+    │   ├── skills.js             ← skillCategories (5 groups)
     │   ├── research.js           ← researchPapers (2), researchInterests
     │   └── achievements.js       ← achievements (6), contestHistory (5)
     │
@@ -161,7 +162,7 @@ Sections alternate between two backgrounds with glowing gradient dividers:
 - Image: `src/assets/hero_image1.jpeg` — 300×300 circle
 - Rings: spinning conic-gradient outer, dashed middle, radial glow inner
 - Typewriter: cycles through `['Full Stack Engineer', 'Competitive Programmer', 'ML Researcher', 'Problem Solver']`
-- Stats bar: 4 cards at bottom (3200+, 2+, 2, 94.3%)
+- Stats bar: 4 cards at bottom (3200+ problems, 2 papers, 2 jobs, 3.13 CGPA)
 - **To change hero image:** swap `hero_image1.jpeg` in assets + update import in Hero.jsx
 
 ### About (About.jsx)
@@ -183,15 +184,15 @@ Sections alternate between two backgrounds with glowing gradient dividers:
 - **To add a project:** push to `otherProjects` or replace `featuredProjects` entries
 
 ### Skills (Skills.jsx)
-- 4 category cards: Languages, Frameworks, CS Fundamentals, Tools & Infrastructure
+- 5 category cards: Languages, Frameworks & Web, ML & Data Science, AI Integration, Tools & Infrastructure
 - Each skill has `name` and `level` (0–100) — bar animates on scroll
-- Badge cloud: `techBadges` array — hover turns blue
 - **To update skills:** edit `src/data/skills.js`
 
 ### Research (Research.jsx)
 - Each paper card has a banner image (Unsplash URL), abstract, findings, keywords, tools
 - Paper images: `researchImages` array inside Research.jsx (Unsplash URLs, index % length)
-- Status badges: "Published" = green, "Under Review" = yellow
+- Status badges: "In Press" = blue, "Published" = green, "Under Review" = yellow
+- Current papers: NPM link sharing (In Press, Communications in S&S) + CSE career prediction (Under Review, IEEE)
 - **To add a paper:** push to `researchPapers` in research.js
 
 ### Achievements (Achievements.jsx)
@@ -225,8 +226,8 @@ cpStats:        { totalProblems, totalContests, bestRank, favoriteTopics[] }
 
 ### src/data/skills.js
 ```js
-skillCategories: [{ category, icon, skills: [{ name, level }] }]
-techBadges:      string[]   // pill cloud
+skillCategories: [{ category, icon, color, tag, skills: [{ name, level }] }]
+// 5 groups: Languages | Frameworks & Web | ML & Data Science | AI Integration | Tools & Infrastructure
 ```
 
 ### src/data/research.js

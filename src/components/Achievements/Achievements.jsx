@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
 import Badge from '../ui/Badge';
-import { achievements, contestHistory } from '../../data/achievements';
+import { FiExternalLink, FiAward, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { achievements, contestHistory, certifications } from '../../data/achievements';
 
 const colorMap = {
   blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
@@ -55,6 +56,104 @@ export default function Achievements() {
           <AchievementCard key={a.id} achievement={a} index={i} />
         ))}
       </div>
+
+      {/* Certifications */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.55 }}
+        className="mb-12"
+      >
+        <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-5">
+          <FiAward className="text-emerald-400" size={20} />
+          Certifications
+        </h3>
+
+        <div className="space-y-4">
+          {certifications.map((cert, i) => (
+            <motion.div
+              key={cert.id}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="relative overflow-hidden rounded-2xl border transition-all duration-300 hover:border-emerald-500/40 group"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(0,0,0,0) 60%)',
+                borderColor: 'rgba(16,185,129,0.2)',
+              }}
+            >
+              {/* Left accent bar */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-gradient-to-b from-emerald-400 to-emerald-600" />
+
+              <div className="p-6 pl-7 flex flex-col md:flex-row md:items-center gap-5">
+                {/* Icon */}
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl"
+                  style={{
+                    background: 'rgba(16,185,129,0.12)',
+                    border: '1.5px solid rgba(16,185,129,0.3)',
+                    boxShadow: '0 0 20px rgba(16,185,129,0.15)',
+                  }}
+                >
+                  🎓
+                </div>
+
+                {/* Main content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h4 className="text-white font-bold text-base">{cert.title}</h4>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                      <FiCheckCircle size={10} />
+                      Verified
+                    </span>
+                  </div>
+
+                  <p className="text-gray-400 text-sm leading-relaxed">{cert.issuer}</p>
+                  <p className="text-gray-600 text-xs mt-0.5">{cert.authority}</p>
+
+                  <div className="flex flex-wrap items-center gap-4 mt-3">
+                    <span className="flex items-center gap-1.5 text-gray-500 text-xs">
+                      <FiClock size={11} className="text-emerald-500" />
+                      {cert.hours} · {cert.period}
+                    </span>
+                    <span className="text-gray-700 text-xs font-mono">Serial: {cert.serial}</span>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {cert.skills.map((s) => (
+                      <span
+                        key={s}
+                        className="px-2 py-0.5 rounded-md text-xs font-medium text-emerald-300 border"
+                        style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)' }}
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <a
+                  href={cert.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white flex-shrink-0 transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    boxShadow: '0 0 18px rgba(16,185,129,0.3)',
+                  }}
+                >
+                  View Certificate
+                  <FiExternalLink size={14} />
+                </a>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Contest history table */}
       <motion.div

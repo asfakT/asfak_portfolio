@@ -49,7 +49,7 @@ export const colors = {
 // ── Gradients ────────────────────────────────────────────────────────────────
 export const gradients = {
   primary:      `linear-gradient(135deg, ${colors.primary.base}, ${colors.primary.light})`,
-  primaryBtn:   `linear-gradient(135deg, ${colors.primary.base}, ${colors.primary.dark})`,
+  primaryBtn:   `linear-gradient(135deg, #10B981, #059669)`,
   secondary:    `linear-gradient(135deg, ${colors.secondary.base}, ${colors.secondary.light})`,
   mixed:        `linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.accent} 50%, ${colors.secondary.base} 100%)`,
   divider:      `linear-gradient(90deg, transparent 0%, ${colors.primary.base} 40%, ${colors.secondary.base} 60%, transparent 100%)`,
@@ -64,8 +64,8 @@ export const shadows = {
   secondaryGlow: `0 0 24px ${colors.secondary.glow}`,
   card:          `0 8px 32px rgba(0, 0, 0, 0.40)`,
   cardHover:     `0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px ${colors.border.primary}`,
-  button:        `0 4px 20px ${colors.primary.glow}`,
-  buttonRed:     `0 4px 20px ${colors.secondary.glow}`,
+  button:        `0 0 18px rgba(16,185,129,0.5), 0 0 6px rgba(16,185,129,0.35)`,
+  buttonRed:     `0 0 22px ${colors.secondary.glow}, 0 0 8px rgba(54,98,151,0.2)`,
 };
 
 // ── Button variant styles (used in Button.jsx) ────────────────────────────────

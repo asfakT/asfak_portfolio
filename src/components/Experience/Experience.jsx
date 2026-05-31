@@ -203,8 +203,8 @@ export default function Experience() {
               {[
                 { label: 'Total Problems', value: cpStats.totalProblems + '+', color: 'blue' },
                 { label: 'Total Contests', value: cpStats.totalContests + '+', color: 'red' },
-                { label: 'Best Rank', value: cpStats.bestRank, color: 'blue' },
-                { label: 'Platforms', value: cpExperience.length, color: 'red' },
+                { label: 'Onsite Contests', value: cpStats.onsiteContests + '+', color: 'blue' },
+                { label: 'Platforms', value: 10, color: 'red' },
               ].map((s) => (
                 <div key={s.label} className={`p-5 rounded-2xl border text-center ${
                   s.color === 'blue' ? 'bg-blue-500/10 border-blue-500/25' : 'bg-red-500/10 border-red-500/25'

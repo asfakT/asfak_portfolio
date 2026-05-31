@@ -7,8 +7,9 @@ Complete reference for AI-assisted development of Asfak Shahrier's portfolio sit
 ## Owner
 
 - **Name:** Asfak Shahrier
-- **Email:** asfak.shahrier@workslayr.com
-- **Role:** Full Stack Software Engineer (Laravel + React), Competitive Programmer, ML Researcher
+- **Email (main):** shahrierasfak27@gmail.com | asfak.shahrier@workslayr.com (work/portfolio)
+- **Role:** Full Stack Software Engineer (Laravel, Angular, React, Django), Competitive Programmer, ML Researcher, AI Integration
+- **Education:** B.Sc. CSE — Gopalganj Science and Technology University (GSTU), CGPA 3.13/4.00, Dec 2024
 - **Goal:** MSc in Europe (AI/ML focus) + Top tech company roles
 
 ---
@@ -49,9 +50,9 @@ npm run preview  # Preview production build
     │   └── about_us_image.jpeg   ← About section photo (tall card, 340×420)
     │
     ├── data/                     ← ALL CONTENT LIVES HERE — edit these to update text
-    │   ├── projects.js           ← featuredProjects (2), otherProjects (6)
-    │   ├── experience.js         ← workExperience (3), cpExperience (4 platforms), cpStats
-    │   ├── skills.js             ← skillCategories (4 groups), techBadges (pill cloud)
+    │   ├── projects.js           ← featuredProjects (2), otherProjects (3)
+    │   ├── experience.js         ← workExperience (2), cpExperience (4 platforms), cpStats
+    │   ├── skills.js             ← skillCategories (5 groups)
     │   ├── research.js           ← researchPapers (2), researchInterests
     │   └── achievements.js       ← achievements (6), contestHistory (5)
     │
@@ -161,7 +162,7 @@ Sections alternate between two backgrounds with glowing gradient dividers:
 - Image: `src/assets/hero_image1.jpeg` — 300×300 circle
 - Rings: spinning conic-gradient outer, dashed middle, radial glow inner
 - Typewriter: cycles through `['Full Stack Engineer', 'Competitive Programmer', 'ML Researcher', 'Problem Solver']`
-- Stats bar: 4 cards at bottom (3200+, 2+, 2, 94.3%)
+- Stats bar: 4 cards at bottom (3200+ problems, 2 papers, 2 jobs, 3.13 CGPA)
 - **To change hero image:** swap `hero_image1.jpeg` in assets + update import in Hero.jsx
 
 ### About (About.jsx)
@@ -183,15 +184,15 @@ Sections alternate between two backgrounds with glowing gradient dividers:
 - **To add a project:** push to `otherProjects` or replace `featuredProjects` entries
 
 ### Skills (Skills.jsx)
-- 4 category cards: Languages, Frameworks, CS Fundamentals, Tools & Infrastructure
+- 5 category cards: Languages, Frameworks & Web, ML & Data Science, AI Integration, Tools & Infrastructure
 - Each skill has `name` and `level` (0–100) — bar animates on scroll
-- Badge cloud: `techBadges` array — hover turns blue
 - **To update skills:** edit `src/data/skills.js`
 
 ### Research (Research.jsx)
 - Each paper card has a banner image (Unsplash URL), abstract, findings, keywords, tools
 - Paper images: `researchImages` array inside Research.jsx (Unsplash URLs, index % length)
-- Status badges: "Published" = green, "Under Review" = yellow
+- Status badges: "In Press" = blue, "Published" = green, "Under Review" = yellow
+- Current papers: NPM link sharing (In Press, Communications in S&S) + CSE career prediction (Under Review, IEEE)
 - **To add a paper:** push to `researchPapers` in research.js
 
 ### Achievements (Achievements.jsx)
@@ -225,8 +226,8 @@ cpStats:        { totalProblems, totalContests, bestRank, favoriteTopics[] }
 
 ### src/data/skills.js
 ```js
-skillCategories: [{ category, icon, skills: [{ name, level }] }]
-techBadges:      string[]   // pill cloud
+skillCategories: [{ category, icon, color, tag, skills: [{ name, level }] }]
+// 5 groups: Languages | Frameworks & Web | ML & Data Science | AI Integration | Tools & Infrastructure
 ```
 
 ### src/data/research.js
@@ -328,3 +329,70 @@ Edit `socialLinks` array in `src/components/Contact/Contact.jsx`:
 - Assets are hashed by Vite: `hero_image1-DGMNu81P.jpeg` etc.
 - To deploy: upload `dist/` to any static host (Vercel, Netlify, GitHub Pages)
 - For Vercel/Netlify SPA routing: add `/* → /index.html` rewrite rule
+
+
+# CLAUDE.md
+
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

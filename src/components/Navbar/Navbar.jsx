@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu, FiX, FiDownload } from 'react-icons/fi';
 
 const navLinks = [
   { href: '#home', label: 'Home' },
@@ -113,11 +113,19 @@ export default function Navbar() {
             {/* ── CTA + hamburger ── */}
             <div className="flex items-center gap-3">
               <a
-                href="mailto:asfak.shahrier@workslayr.com"
+                href="/resume.pdf"
+                download
+                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 text-[15px] font-medium text-gray-300 rounded-xl border border-white/15 hover:text-white hover:border-blue-500/40 transition-all duration-200"
+              >
+                <FiDownload size={15} />
+                Resume
+              </a>
+              <a
+                href="mailto:shahrierasfak27@gmail.com"
                 className="hidden md:inline-flex items-center px-5 py-2.5 text-[15px] font-semibold text-white rounded-xl transition-all duration-200 hover:scale-105"
                 style={{
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  boxShadow: '0 0 14px rgba(59,130,246,0.35)',
+                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  boxShadow: '0 0 18px rgba(16,185,129,0.5), 0 0 6px rgba(16,185,129,0.35)',
                 }}
               >
                 Hire Me
@@ -173,9 +181,9 @@ export default function Navbar() {
               })}
               <div className="pt-3 pb-1">
                 <a
-                  href="mailto:asfak.shahrier@workslayr.com"
+                  href="mailto:shahrierasfak27@gmail.com"
                   className="block w-full text-center px-5 py-3.5 text-base font-semibold text-white rounded-xl transition-colors"
-                  style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}
                 >
                   Hire Me
                 </a>

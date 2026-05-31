@@ -5,7 +5,7 @@ import heroImg from '../../assets/hero_image1.jpeg';
 import Button from '../ui/Button';
 
 const roles = [
-  'Sostware Engineer',
+  'Software Engineer',
   'Full Stack Web Developer',
   'Programmer',
   'Problem Solver',
@@ -15,8 +15,8 @@ const stats = [
   { value: '3200+', label: 'Problems Solved', color: 'blue' },
   { value: '2+', label: 'Years Experience', color: 'red' },
   { value: '2', label: 'Research Papers', color: 'blue' },
-  { value: '94.3%', label: 'ML Accuracy', color: 'red' },
 ];
+
 
 function TypeWriter({ words }) {
   const [index, setIndex] = useState(0);
@@ -136,7 +136,7 @@ export default function Hero() {
             {/* Social row */}
             <motion.div variants={itemVariants} className="flex items-center gap-4 pt-1">
               <a
-                href="https://github.com"
+                href="https://github.com/asfakT"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-3 rounded-xl border border-white/10 text-gray-300 hover:text-white hover:border-blue-500/60 hover:bg-blue-500/10 transition-all duration-200"
@@ -145,7 +145,7 @@ export default function Hero() {
                 <FiGithub size={20} />
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/asfak-shahrier/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-3 rounded-xl border border-white/10 text-gray-300 hover:text-white hover:border-blue-500/60 hover:bg-blue-500/10 transition-all duration-200"
@@ -154,7 +154,7 @@ export default function Hero() {
                 <FiLinkedin size={20} />
               </a>
               <span className="h-px w-10 bg-white/10" />
-              <span className="text-gray-500 text-sm">asfak.shahrier@workslayr.com</span>
+              <span className="text-gray-500 text-sm">shahrierasfak27@gmail.com</span>
             </motion.div>
           </motion.div>
 
@@ -194,7 +194,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.9 }}
-          className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4"
+          className="mt-20 grid grid-cols-3 gap-4"
         >
           {stats.map((stat) => (
             <div
@@ -202,11 +202,7 @@ export default function Hero() {
               className="text-center p-5 rounded-2xl border border-white/8 hover:border-blue-500/30 transition-colors"
               style={{ background: 'rgba(255,255,255,0.03)' }}
             >
-              <p
-                className={`text-3xl md:text-4xl font-extrabold ${
-                  stat.color === 'blue' ? 'text-gradient-blue' : 'text-gradient-red'
-                }`}
-              >
+              <p className={`text-3xl md:text-4xl font-extrabold ${stat.color === 'blue' ? 'text-gradient-blue' : 'text-gradient-red'}`}>
                 {stat.value}
               </p>
               <p className="text-gray-400 text-sm mt-1.5 font-medium">{stat.label}</p>
