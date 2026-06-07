@@ -17,7 +17,7 @@ export const skillCategories = [
   {
     category: 'Web Development',
     icon: 'zap',
-    color: '#F59E0B',
+    color: '#10B981',
     tag: 'DEVELOPMENT',
     skills: [
       { name: 'Tailwind CSS', level: 90 },
@@ -33,7 +33,7 @@ export const skillCategories = [
   {
     category: 'ML & Data Science',
     icon: 'cpu',
-    color: '#8B5CF6',
+    color: '#3B82F6',
     tag: 'DATA / ML',
     skills: [
       { name: 'Pandas', level: 82 },
@@ -62,7 +62,7 @@ export const skillCategories = [
   {
     category: 'AI Integration',
     icon: 'aperture',
-    color: '#EF4444',
+    color: '#3B82F6',
     tag: 'AI / LLM',
     skills: [
       { name: 'OpenAI GPT API', level: 75 },
@@ -73,7 +73,7 @@ export const skillCategories = [
   {
     category: 'CS Fundamentals',
     icon: 'shield',
-    color: '#06B6D4',
+    color: '#10B981',
     tag: 'THEORY',
     skills: [
       { name: 'Data Structures', level: 92 },

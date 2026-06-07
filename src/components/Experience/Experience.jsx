@@ -85,7 +85,7 @@ function WorkCard({ exp, index }) {
 
 function TrainingCard({ item, index }) {
   const isGreen = item.color === 'green';
-  const accent = isGreen ? '#10B981' : '#EF4444';
+  const accent = isGreen ? '#10B981' : '#3B82F6';
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -122,7 +122,7 @@ function TrainingCard({ item, index }) {
             <p className="text-sm font-medium" style={{ color: accent }}>{item.organization}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <Badge color={isGreen ? 'green' : 'red'} size="sm">{item.period}</Badge>
+            <Badge color={isGreen ? 'green' : 'blue'} size="sm">{item.period}</Badge>
             <Badge color="gray" size="sm">{item.type}</Badge>
           </div>
         </div>

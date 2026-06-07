@@ -75,8 +75,8 @@ export default function Hero() {
       {/* Background grid */}
       <div className="absolute inset-0 grid-bg pointer-events-none" />
       {/* Glow blobs */}
-      <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-48 w-[500px] h-[500px] bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] bg-blue-500/[0.06] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-48 w-[460px] h-[460px] bg-blue-500/[0.04] rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-28 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-start">

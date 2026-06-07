@@ -9,7 +9,7 @@
   --color-primary-dark:   #2563EB;
   --color-secondary:       #366297;
   --color-secondary-light: #4a7fc1;
-  --color-accent:         #9333EA;
+  --color-accent:         #10B981;
 
   --bg-base:    #0d0e14;
   --bg-surface: #10111a;
@@ -74,7 +74,7 @@
   }
 
   .text-gradient-red {
-    background: linear-gradient(135deg, #EF4444, #F87171);
+    background: linear-gradient(135deg, #10B981, #34D399);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -92,13 +92,13 @@
   }
 
   .glow-red {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 0 60px rgba(239, 68, 68, 0.1);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 60px rgba(16, 185, 129, 0.1);
   }
 
   .border-gradient {
     border: 1px solid transparent;
     background-clip: padding-box;
-    background-image: linear-gradient(#111, #111), linear-gradient(135deg, #3B82F6, #EF4444);
+    background-image: linear-gradient(#111, #111), linear-gradient(135deg, #3B82F6, #10B981);
     background-origin: border-box;
   }
 
@@ -124,6 +124,17 @@
   width: 20px !important;
   border-radius: 4px !important;
 }
+/* Subtle film grain overlay — adds hand-crafted depth */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 /* Equal-height project + certificate cards */
 .projects-swiper .swiper-slide,
 .cert-swiper .swiper-slide {

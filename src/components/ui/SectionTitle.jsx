@@ -37,7 +37,7 @@ export default function SectionTitle({ label, title, subtitle }) {
         whileInView={{ width: 56 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="h-1 bg-gradient-to-r from-blue-500 to-red-500 mt-5 rounded-full"
+        className="h-1 bg-gradient-to-r from-blue-500 to-emerald-500 mt-5 rounded-full"
         style={{ boxShadow: '0 0 12px rgba(59,130,246,0.5)' }}
       />
     </div>

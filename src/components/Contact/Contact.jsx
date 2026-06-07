@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import {
   FiMail, FiGithub, FiLinkedin, FiArrowRight,
   FiArrowUpCircle, FiMapPin, FiSend, FiPhone,
+  FiBookOpen, FiBriefcase, FiActivity,
 } from 'react-icons/fi';
 import { FaWhatsapp, FaMedium } from 'react-icons/fa';
 import { SiCodeforces } from 'react-icons/si';
@@ -45,17 +46,17 @@ const socialLinks = [
 
 const openTo = [
   {
-    icon: '🎓',
+    icon: FiBookOpen,
     title: 'MSc Applications',
     desc: 'MSc in AI / Machine Learning and related CS programs',
   },
   {
-    icon: '💼',
+    icon: FiBriefcase,
     title: 'Engineering Roles',
     desc: 'Full stack, backend, or ML engineering at product companies',
   },
   {
-    icon: '🔬',
+    icon: FiActivity,
     title: 'Research Collaboration',
     desc: 'Joint research in ML / NLP and applied AI',
   },
@@ -80,14 +81,14 @@ export default function Contact() {
         transition={{ duration: 0.6 }}
         className="relative overflow-hidden rounded-3xl p-8 md:p-10 mb-14 flex flex-col md:flex-row items-center justify-between gap-6"
         style={{
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(239,68,68,0.08) 100%)',
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)',
           border: '1px solid rgba(59,130,246,0.25)',
           boxShadow: '0 0 60px rgba(59,130,246,0.1)',
         }}
       >
         {/* Glow blob */}
-        <div className="absolute -top-10 -left-10 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-10 -left-10 w-48 h-48 bg-blue-500/[0.06] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-500/[0.04] rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
@@ -135,7 +136,9 @@ export default function Contact() {
             or a fellow engineer — I'd love to hear from you.
           </p>
 
-          {openTo.map((item, i) => (
+          {openTo.map((item, i) => {
+            const Icon = item.icon;
+            return (
             <motion.div
               key={item.title}
               initial={{ opacity: 0, x: -20 }}
@@ -145,13 +148,16 @@ export default function Contact() {
               className="flex gap-4 p-5 rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
               style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
             >
-              <span className="text-2xl flex-shrink-0 mt-0.5">{item.icon}</span>
+              <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/25 flex-shrink-0 mt-0.5 self-start">
+                <Icon size={18} className="text-blue-400" />
+              </div>
               <div>
                 <p className="text-white font-bold text-base mb-1">{item.title}</p>
                 <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
 
         {/* Right — social grid */}

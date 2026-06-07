@@ -21,8 +21,8 @@ function SectionDivider({ flip = false }) {
         className="absolute inset-0"
         style={{
           background: flip
-            ? 'linear-gradient(90deg, transparent 0%, #EF4444 40%, #3B82F6 60%, transparent 100%)'
-            : 'linear-gradient(90deg, transparent 0%, #3B82F6 40%, #EF4444 60%, transparent 100%)',
+            ? 'linear-gradient(90deg, transparent 0%, #10B981 40%, #3B82F6 60%, transparent 100%)'
+            : 'linear-gradient(90deg, transparent 0%, #3B82F6 40%, #10B981 60%, transparent 100%)',
           boxShadow: '0 0 18px 3px rgba(59,130,246,0.25)',
         }}
       />

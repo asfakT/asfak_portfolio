@@ -69,7 +69,7 @@ export default function About() {
               <div
                 className="absolute inset-0 rounded-3xl blur-2xl"
                 style={{
-                  background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.25) 0%, rgba(239,68,68,0.1) 60%, transparent 80%)',
+                  background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.25) 0%, rgba(16,185,129,0.1) 60%, transparent 80%)',
                   transform: 'scale(1.1)',
                 }}
               />
@@ -99,8 +99,8 @@ export default function About() {
                 style={{ background: 'rgba(59,130,246,0.06)' }}
               />
               <div
-                className="absolute -bottom-3 -left-3 w-12 h-12 rounded-xl border-2 border-red-500/30"
-                style={{ background: 'rgba(239,68,68,0.06)' }}
+                className="absolute -bottom-3 -left-3 w-12 h-12 rounded-xl border-2 border-emerald-500/30"
+                style={{ background: 'rgba(16,185,129,0.06)' }}
               />
             </div>
           </div>
@@ -253,11 +253,11 @@ export default function About() {
                   <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
                     style={{
-                      background: edu.color === 'blue' ? 'rgba(59,130,246,0.12)' : 'rgba(239,68,68,0.12)',
-                      border: edu.color === 'blue' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(239,68,68,0.25)',
+                      background: edu.color === 'blue' ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)',
+                      border: edu.color === 'blue' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(16,185,129,0.25)',
                     }}
                   >
-                    <FiBook size={14} className={edu.color === 'blue' ? 'text-blue-400' : 'text-red-400'} />
+                    <FiBook size={14} className={edu.color === 'blue' ? 'text-blue-400' : 'text-emerald-400'} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-white font-semibold text-sm leading-snug">{edu.degree}</p>

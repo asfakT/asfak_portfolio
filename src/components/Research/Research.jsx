@@ -5,13 +5,13 @@ import SectionTitle from '../ui/SectionTitle';
 import Badge from '../ui/Badge';
 import { researchPapers, researchInterests } from '../../data/research';
 
-const colorHex = { blue: '#3B82F6', red: '#EF4444' };
+const colorHex = { blue: '#3B82F6', red: '#10B981' };
 
 // Status pill styling — In Press (accepted) is stronger than Under Review
 const statusStyle = {
-  'Published':    { cls: 'bg-green-500/20 text-green-300 border-green-500/30',  Icon: FiCheckCircle },
-  'In Press':     { cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30',     Icon: FiCheckCircle },
-  'Under Review': { cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', Icon: FiClock },
+  'Published':    { cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', Icon: FiCheckCircle },
+  'In Press':     { cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', Icon: FiCheckCircle },
+  'Under Review': { cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30',          Icon: FiClock },
 };
 
 function PaperCard({ paper, index }) {
@@ -59,13 +59,13 @@ function PaperCard({ paper, index }) {
         {/* Title + venue */}
         <div className="flex items-start gap-3 mb-4">
           <div className={`p-2.5 rounded-xl mt-0.5 flex-shrink-0 ${
-            paper.color === 'blue' ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-red-500/15 border border-red-500/25'
+            paper.color === 'blue' ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-emerald-500/15 border border-emerald-500/25'
           }`}>
-            <FiFileText size={17} className={paper.color === 'blue' ? 'text-blue-400' : 'text-red-400'} />
+            <FiFileText size={17} className={paper.color === 'blue' ? 'text-blue-400' : 'text-emerald-400'} />
           </div>
           <div>
             <h3 className="text-white font-bold text-base leading-snug mb-2">{paper.title}</h3>
-            <p className={`text-sm font-medium ${paper.color === 'blue' ? 'text-blue-400' : 'text-red-400'}`}>
+            <p className={`text-sm font-medium ${paper.color === 'blue' ? 'text-blue-400' : 'text-emerald-400'}`}>
               {paper.venue}
             </p>
             {paper.supervisor && (
@@ -88,7 +88,7 @@ function PaperCard({ paper, index }) {
           <ul className="space-y-2">
             {paper.findings.map((f) => (
               <li key={f} className="text-gray-400 text-sm flex items-start gap-2.5">
-                <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${paper.color === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`} />
+                <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${paper.color === 'blue' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                 {f}
               </li>
             ))}
@@ -98,7 +98,7 @@ function PaperCard({ paper, index }) {
         {/* Keywords */}
         <div className="flex flex-wrap gap-1.5 mb-4">
           {paper.keywords.map((k) => (
-            <Badge key={k} color={paper.color === 'blue' ? 'blue' : 'red'} size="sm">{k}</Badge>
+            <Badge key={k} color={paper.color === 'blue' ? 'blue' : 'green'} size="sm">{k}</Badge>
           ))}
         </div>
 
@@ -161,7 +161,7 @@ export default function Research() {
         transition={{ duration: 0.5 }}
         className="p-6 rounded-2xl border"
         style={{
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.07) 0%, transparent 50%, rgba(239,68,68,0.07) 100%)',
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.07) 0%, transparent 50%, rgba(16,185,129,0.07) 100%)',
           borderColor: 'rgba(255,255,255,0.08)',
         }}
       >

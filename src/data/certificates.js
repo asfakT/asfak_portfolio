@@ -37,7 +37,7 @@ export const certificates = [
     description:
       'Completed foundational certification covering Claude AI capabilities, prompt engineering best practices, tool use, and responsible AI application development.',
     category: 'AI / ML',
-    color: 'purple',
+    color: 'blue',
     icon: '🤖',
     imageUrl: '/certs/claude-101.png',
   },

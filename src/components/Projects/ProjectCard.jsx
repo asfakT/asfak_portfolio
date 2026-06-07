@@ -4,9 +4,9 @@ import Badge from '../ui/Badge';
 
 // Category tag → badge color
 const tagColor = {
-  'ML / Research': 'red',
+  'ML / Research': 'green',
   'Full Stack': 'blue',
-  'AI / Web': 'purple',
+  'AI / Web': 'green',
   'Production': 'green',
   'Web App': 'blue',
 };

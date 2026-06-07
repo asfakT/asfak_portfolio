@@ -22,9 +22,9 @@ const catIconMap = { code: FiCode, zap: FiZap, cpu: FiCpu, tool: FiTool, apertur
 
 // ── Category tag config ───────────────────────────────────────────────────────
 const categoryMeta = {
-  'Languages':              { tagIcon: FiStar,     tagColor: '#F59E0B' },
+  'Languages':              { tagIcon: FiStar,     tagColor: '#3B82F6' },
   'Frameworks & Libraries': { tagIcon: FiCode,     tagColor: '#3B82F6' },
-  'Python Libraries':       { tagIcon: FiDatabase, tagColor: '#8B5CF6' },
+  'Python Libraries':       { tagIcon: FiDatabase, tagColor: '#10B981' },
   'CS & Tools':             { tagIcon: FiShield,   tagColor: '#10B981' },
 };
 
@@ -73,8 +73,8 @@ const skillIconMap = {
 };
 
 // ── Single skill row ──────────────────────────────────────────────────────────
-function SkillRow({ name, index }) {
-  const ic = skillIconMap[name] || { icon: FiCode, bg: '#1a1a2e', fg: '#9ca3af' };
+function SkillRow({ name, index, accent = '#3B82F6' }) {
+  const ic = skillIconMap[name] || { icon: FiCode };
   const Icon = ic.icon;
 
   return (
@@ -85,12 +85,12 @@ function SkillRow({ name, index }) {
       transition={{ duration: 0.35, delay: index * 0.05 }}
       className="group flex items-center gap-3 py-0.5"
     >
-      {/* Brand icon */}
+      {/* Brand icon — tinted to the card accent */}
       <div
         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-        style={{ background: ic.bg }}
+        style={{ background: accent + '18', border: `1px solid ${accent}2a` }}
       >
-        <Icon size={16} style={{ color: ic.fg }} />
+        <Icon size={16} style={{ color: accent }} />
       </div>
 
       {/* Name */}
@@ -162,7 +162,7 @@ function CategoryCard({ category, index }) {
           {[...category.skills]
             .sort((a, b) => b.level - a.level)
             .map((skill, i) => (
-              <SkillRow key={skill.name} name={skill.name} index={i} />
+              <SkillRow key={skill.name} name={skill.name} index={i} accent={color} />
             ))}
         </div>
       </div>
@@ -172,13 +172,13 @@ function CategoryCard({ category, index }) {
 
 // ── Loved tech row ────────────────────────────────────────────────────────────
 const lovedTech = [
-  { icon: SiReact,      color: '#61DAFB' },
-  { icon: SiLaravel,    color: '#FF2D20' },
-  { icon: SiPython,     color: '#FFD43B' },
-  { icon: SiMysql,      color: '#4479A1' },
-  { icon: SiGit,        color: '#F05032' },
-  { icon: SiDocker,     color: '#2496ED' },
-  { icon: SiFigma,      color: '#F24E1E' },
+  { icon: SiReact,      color: '#3B82F6' },
+  { icon: SiLaravel,    color: '#10B981' },
+  { icon: SiPython,     color: '#3B82F6' },
+  { icon: SiMysql,      color: '#10B981' },
+  { icon: SiGit,        color: '#3B82F6' },
+  { icon: SiDocker,     color: '#10B981' },
+  { icon: SiFigma,      color: '#3B82F6' },
 ];
 
 // ── Main export ───────────────────────────────────────────────────────────────

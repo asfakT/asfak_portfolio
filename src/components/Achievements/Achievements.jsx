@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { FiAward, FiFileText, FiBookOpen } from 'react-icons/fi';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
 import Badge from '../ui/Badge';
@@ -6,12 +7,20 @@ import { achievements, contestHistory, contestGallery } from '../../data/achieve
 
 const colorMap = {
   blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-  red: 'bg-red-500/10 border-red-500/20 text-red-400',
-  yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
+  red: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+  yellow: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
   green: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
 };
 
+const categoryIcon = {
+  'Competitive Programming': FiAward,
+  'Research': FiFileText,
+  'Certification': FiBookOpen,
+  'Training Program': FiBookOpen,
+};
+
 function AchievementCard({ achievement, index }) {
+  const Icon = categoryIcon[achievement.category] || FiAward;
   return (
     <motion.div
       initial={{ opacity: 0, y: 25 }}
@@ -22,14 +31,14 @@ function AchievementCard({ achievement, index }) {
       className="p-5 rounded-2xl bg-card border border-border hover:border-border-light transition-all duration-300"
     >
       <div className="flex items-start gap-4">
-        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-xl flex-shrink-0 ${colorMap[achievement.color]}`}>
-          {achievement.icon}
+        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${colorMap[achievement.color]}`}>
+          <Icon size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <h3 className="text-white font-semibold text-sm">{achievement.title}</h3>
             {achievement.year && (
-              <Badge color={achievement.color} size="xs">{achievement.year}</Badge>
+              <Badge color={achievement.color === 'blue' ? 'blue' : 'green'} size="xs">{achievement.year}</Badge>
             )}
           </div>
           <p className="text-gray-400 text-xs leading-relaxed">{achievement.description}</p>
@@ -87,7 +96,7 @@ export default function Achievements() {
                 <span
                   className={`px-2.5 py-1 rounded-md text-xs font-bold border whitespace-nowrap ${
                     isTop
-                      ? 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                       : 'bg-blue-500/15 text-blue-300 border-blue-500/25'
                   }`}
                 >
@@ -123,8 +132,8 @@ export default function Achievements() {
                 alt={g.caption}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
-                <span className="text-white text-[10px] leading-tight text-left">{g.caption}</span>
+              <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex items-end p-3">
+                <span className="text-white text-xs sm:text-sm font-semibold leading-snug text-left drop-shadow">{g.caption}</span>
               </div>
             </motion.div>
           ))}
