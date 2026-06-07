@@ -164,7 +164,13 @@ export default async function handler(req, res) {
 
     const data = await r.json();
     if (!r.ok) {
-      return res.status(r.status).json({ error: data?.error?.message || 'Groq API error' });
+      // Log the real provider error server-side only (never shown to users)
+      console.error('Groq error', r.status, data?.error?.message);
+      const friendly =
+        r.status === 429
+          ? "I'm getting a lot of questions right now - please try again in a few minutes, or reach Asfak at shahrierasfak27@gmail.com."
+          : "Sorry, I'm having trouble responding right now. Please try again shortly, or email shahrierasfak27@gmail.com.";
+      return res.status(200).json({ reply: friendly });
     }
 
     const reply =
@@ -172,6 +178,9 @@ export default async function handler(req, res) {
       "Sorry, I couldn't generate a reply.";
     return res.status(200).json({ reply });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Request failed' });
+    console.error('chat handler error', err);
+    return res.status(200).json({
+      reply: "Sorry, something went wrong on my side. Please try again shortly, or email shahrierasfak27@gmail.com.",
+    });
   }
 }
