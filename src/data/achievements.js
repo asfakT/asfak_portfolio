@@ -1,9 +1,9 @@
 export const achievements = [
   {
     id: 1,
-    title: '1st in Bangladesh — CodeChef',
+    title: 'Country Rank #1 — CodeChef (Bangladesh)',
     description:
-      '1st place in Bangladesh in CodeChef Starters June 2021 (Div 3), competing nationally across all university participants.',
+      'Ranked #1 in Bangladesh at CodeChef Starters June 2021 (Division 3).',
     category: 'Competitive Programming',
     year: 2021,
     icon: '🥇',
@@ -11,36 +11,54 @@ export const achievements = [
   },
   {
     id: 2,
-    title: '6+ Onsite Programming Contests',
+    title: 'Codeforces Specialist + LeetCode Knight',
     description:
-      'Participated in 6+ ICPC-style onsite programming contests across regional and inter-university venues, including UGV South Zone (3rd) and KU (4th).',
+      'Codeforces Specialist (rating 1462, top 20% globally) and LeetCode Knight (rating 1854, top 6% globally).',
     category: 'Competitive Programming',
-    year: 2023,
-    icon: '🏟️',
+    year: null,
+    icon: '⚔️',
     color: 'blue',
   },
   {
     id: 3,
-    title: '4th Place — KU Programming Contest',
+    title: '3rd Place — UGV South Zone Contest',
+    description: '3rd place (team) at the UGV South Zone Programming Contest.',
+    category: 'Competitive Programming',
+    year: null,
+    icon: '🥉',
+    color: 'blue',
+  },
+  {
+    id: 4,
+    title: '4th Place — GSTU Intra University 2023',
     description:
-      '4th place at Khulna University Programming Contest among competing university teams.',
+      '4th place (team) at the GSTU Intra University Programming Contest 2023.',
     category: 'Competitive Programming',
     year: 2023,
     icon: '🏅',
     color: 'blue',
   },
   {
-    id: 4,
-    title: 'CF Specialist + LC Knight',
-    description:
-      'Achieved Codeforces Specialist (rating 1462, top 15% globally) and LeetCode Knight (rating 1820) — dual-platform milestones.',
+    id: 5,
+    title: '4th Place — KU Programming Contest',
+    description: '4th place (team) at the KU CSE Fest 2022 Programming Contest.',
     category: 'Competitive Programming',
-    year: 2024,
-    icon: '⚔️',
+    year: 2022,
+    icon: '🏅',
     color: 'blue',
   },
   {
-    id: 5,
+    id: 8,
+    title: '5th Place — Learnathon 3.0',
+    description:
+      '5th place at Learnathon 3.0, an industry-mentored training program by Brainstation 23.',
+    category: 'Training Program',
+    year: 2025,
+    icon: '🏅',
+    color: 'red',
+  },
+  {
+    id: 6,
     title: '2 Research Papers',
     description:
       'First-authored 2 research papers: one In Press at Communications in Software and Systems, one Under Review at IEEE.',
@@ -50,10 +68,10 @@ export const achievements = [
     color: 'red',
   },
   {
-    id: 6,
+    id: 7,
     title: 'Data Analysis Certificate — BCC',
     description:
-      '80-hour Data Analysis certification from Bangladesh Computer Council, covering statistical analysis and ML methodologies.',
+      '80-hour Data Analysis certification from Bangladesh Computer Council (ICT Division, EDGE Project).',
     category: 'Certification',
     year: 2024,
     icon: '🎓',
@@ -76,10 +94,20 @@ export const certifications = [
   },
 ];
 
+// Onsite contest results — verified placements only (no fabricated participant counts).
 export const contestHistory = [
-  { name: 'CodeChef Starters — June 2021 (Div 3)', rank: 1, participants: 2000, year: 2021 },
-  { name: 'UGV South Zone Programming Contest', rank: 3, participants: 50, year: 2023 },
-  { name: 'KU Programming Contest', rank: 4, participants: 60, year: 2023 },
-  { name: 'Codeforces — Best Rated Round', rank: 342, participants: 12000, year: 2024 },
-  { name: 'LeetCode Weekly Contest', rank: 420, participants: 20000, year: 2024 },
+  { name: 'CodeChef Starters — June 2021 (Div 3)', placement: 'Country Rank #1 · Bangladesh', year: 2021 },
+  { name: 'UGV South Zone Programming Contest', placement: '3rd Place · Team', year: null },
+  { name: 'GSTU Intra University Programming Contest', placement: '4th Place · Team', year: 2023 },
+  { name: 'KU CSE Fest Programming Contest', placement: '4th Place · Team', year: 2022 },
+];
+
+// Real contest photos — proof of onsite participation.
+export const contestGallery = [
+  { src: '/achievements/ugv1.png', caption: 'UGV South Zone — 3rd Place (Team)' },
+  { src: '/achievements/ugv2.png', caption: 'UGV South Zone — Team' },
+  { src: '/achievements/ku-contest.png', caption: 'KU CSE Fest 2022 — 4th Place (Team)' },
+  { src: '/achievements/ku-contest-2.png', caption: 'KU CSE Fest 2022 — Contest Round' },
+  { src: '/achievements/ku-contest-3.png', caption: 'KU CSE Fest 2022 — Team' },
+  { src: '/achievements/learnathon.jpeg', caption: 'Learnathon 3.0 — 5th Place (Brainstation 23)' },
 ];

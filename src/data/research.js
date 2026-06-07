@@ -4,6 +4,7 @@ export const researchPapers = [
     title: 'Understanding Link Sharing Practice in NPM Related Tweets by Package Maintainers Community',
     status: 'In Press',
     venue: 'Communications in Software and Systems',
+    supervisor: 'Dr. Syful Islam, GSTU',
     year: 2025,
     abstract:
       'This study investigates link sharing behavior within the NPM ecosystem by analyzing 39,426 tweets from package maintainers on Twitter. We identify what types of resources are shared, which domains are most referenced, and the rate at which shared links decay over time.',
@@ -17,7 +18,7 @@ export const researchPapers = [
     tools: ['Python', 'requests', 'NLTK', 'Pandas', 'Mixed-methods analysis'],
     keywords: ['NPM', 'Twitter', 'Link Sharing', 'Mining Software Repositories', 'Open Source', 'JavaScript'],
     doi: null,
-    pdf: null,
+    pdf: '/papers/npm-link-sharing.pdf',
     color: 'blue',
   },
   {
@@ -25,6 +26,7 @@ export const researchPapers = [
     title: "Predicting CSE Undergraduate Students' Careers Using Machine Learning Algorithms in the Context of Bangladesh",
     status: 'Under Review',
     venue: 'IEEE Conference',
+    supervisor: 'Dr. Saleh Ahmed, GSTU',
     year: 2025,
     abstract:
       'We propose the first multi-label career prediction framework for CSE undergraduates in Bangladesh using real survey data from 468 students across 47 universities. We collected 24 features including CGPA, technical skills, soft skills, research experience, publications, and preferred job sectors, then evaluated 10 ML classifiers.',
@@ -37,7 +39,7 @@ export const researchPapers = [
     tools: ['Python', 'XGBoost', 'Scikit-learn', 'Pandas', 'NumPy', 'Matplotlib'],
     keywords: ['Machine Learning', 'Career Prediction', 'Multi-label Classification', 'XGBoost', 'CSE Education', 'Bangladesh'],
     doi: null,
-    pdf: null,
+    pdf: '/papers/cse-career-prediction.pdf',
     color: 'red',
   },
 ];

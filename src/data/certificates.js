@@ -1,0 +1,44 @@
+export const certificates = [
+  {
+    id: 1,
+    title: 'ICPC Asia Dhaka Regional 2023',
+    subtitle: 'Honorable Mention',
+    issuer: 'ICPC Foundation',
+    authority: 'International Collegiate Programming Contest',
+    date: 'Oct 13, 2023',
+    description:
+      'Competed in the 2023 ICPC Asia Dhaka Regional Site Online Preliminary Contest representing GSTU as team BSMRSTU_Downflow. Received official honorable mention certificate from ICPC Foundation.',
+    category: 'Competitive Programming',
+    color: 'blue',
+    icon: '🏆',
+    imageUrl: '/certs/icpc-2023.png',
+  },
+  {
+    id: 2,
+    title: 'Data Analysis with Python',
+    subtitle: '80-Hour Government Certification',
+    issuer: 'Bangladesh Computer Council, ICT Division',
+    authority: 'EDGE Project — BSMRSTU',
+    date: 'Nov 27, 2024',
+    description:
+      'Completed 80-hour government-backed certified training on data analysis using Python, covering statistics, Pandas, NumPy, and ML fundamentals. Serial: EDGE-DSTS-110-2094-00006.',
+    category: 'Data Science',
+    color: 'green',
+    icon: '📊',
+    imageUrl: '/certs/data-analysis.png',
+  },
+  {
+    id: 3,
+    title: 'Claude AI — 101 Certification',
+    subtitle: 'AI Foundations',
+    issuer: 'Anthropic',
+    authority: 'Claude AI Platform',
+    date: '2024',
+    description:
+      'Completed foundational certification covering Claude AI capabilities, prompt engineering best practices, tool use, and responsible AI application development.',
+    category: 'AI / ML',
+    color: 'purple',
+    icon: '🤖',
+    imageUrl: '/certs/claude-101.png',
+  },
+];

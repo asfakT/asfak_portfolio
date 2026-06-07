@@ -1,3 +1,5 @@
+// level drives tier (Expert / Advanced / Familiar) + sort order.
+// It is NOT shown as a number anywhere — see prof() in Skills.jsx.
 export const skillCategories = [
   {
     category: 'Languages',
@@ -13,15 +15,18 @@ export const skillCategories = [
     ],
   },
   {
-    category: 'Frameworks & Web',
+    category: 'Web Development',
     icon: 'zap',
     color: '#F59E0B',
     tag: 'DEVELOPMENT',
     skills: [
       { name: 'Tailwind CSS', level: 90 },
+      { name: 'HTML / CSS', level: 88 },
+      { name: 'REST API', level: 85 },
       { name: 'Django', level: 82 },
       { name: 'Angular', level: 80 },
       { name: 'Laravel', level: 80 },
+      { name: 'Bootstrap', level: 80 },
       { name: 'React', level: 70 },
     ],
   },
@@ -34,10 +39,24 @@ export const skillCategories = [
       { name: 'Pandas', level: 82 },
       { name: 'Scikit-learn', level: 80 },
       { name: 'NumPy', level: 80 },
-      { name: 'Matplotlib', level: 75 },
       { name: 'XGBoost', level: 78 },
+      { name: 'Matplotlib', level: 75 },
       { name: 'Seaborn', level: 72 },
       { name: 'NLTK', level: 68 },
+    ],
+  },
+  {
+    category: 'Tools & Infrastructure',
+    icon: 'tool',
+    color: '#10B981',
+    tag: 'FOUNDATION',
+    skills: [
+      { name: 'Git / GitHub', level: 88 },
+      { name: 'VS Code', level: 85 },
+      { name: 'MySQL / PostgreSQL', level: 82 },
+      { name: 'Jupyter Notebook', level: 80 },
+      { name: 'LaTeX', level: 70 },
+      { name: 'Figma', level: 70 },
     ],
   },
   {
@@ -52,16 +71,15 @@ export const skillCategories = [
     ],
   },
   {
-    category: 'Tools & Infrastructure',
-    icon: 'tool',
-    color: '#10B981',
-    tag: 'FOUNDATION',
+    category: 'CS Fundamentals',
+    icon: 'shield',
+    color: '#06B6D4',
+    tag: 'THEORY',
     skills: [
-      { name: 'Git / GitHub', level: 88 },
-      { name: 'REST API', level: 85 },
-      { name: 'MySQL / PostgreSQL', level: 82 },
-      { name: 'Jupyter Notebook', level: 80 },
-      { name: 'LaTeX', level: 70 },
+      { name: 'Data Structures', level: 92 },
+      { name: 'Algorithms', level: 92 },
+      { name: 'OOP', level: 82 },
+      { name: 'Operating Systems', level: 72 },
     ],
   },
 ];

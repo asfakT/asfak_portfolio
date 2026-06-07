@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FiMapPin, FiMail, FiCalendar, FiBook } from 'react-icons/fi';
+import { FiMapPin, FiMail, FiCalendar, FiBook, FiPhone } from 'react-icons/fi';
 import heroImg from '../../assets/about_us_image.jpeg';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
@@ -9,14 +9,16 @@ const education = [
   {
     degree: 'B.Sc. in Computer Science & Engineering',
     institution: 'Gopalganj Science and Technology University (GSTU), Gopalganj',
+    url: 'https://gstu.edu.bd/s/',
     period: '2020 — 2024',
     // gpa: 'CGPA 3.13 / 4.00',
-    highlights: ['Graduated Dec 2024', '2 Research Papers (In Press + Under Review)', '3200+ CP problems solved'],
+    highlights: ['Graduated Dec 2024', '2 Research Papers (In Press + Under Review)'],
     color: 'blue',
   },
   {
     degree: 'Higher Secondary Certificate (HSC)',
     institution: 'Gridakalindia Hazera Hasmat University College, Faridganj, Chandpur',
+    url: 'https://www.sohopathi.com/gridakalindia-hazera-hasmate-degree-college/',
     period: '—',
     gpa: null,
     highlights: [],
@@ -25,6 +27,7 @@ const education = [
   {
     degree: 'Secondary School Certificate (SSC)',
     institution: "Raipur Government Merchant's Academy, Raipur, Lakshmipur",
+    url: 'https://www.sohopathi.com/raipur-marchants-academy/',
     period: '—',
     gpa: null,
     highlights: [],
@@ -33,10 +36,10 @@ const education = [
 ];
 
 const personalInfo = [
-  { icon: FiMapPin, label: 'Location', value: 'Lakshmipur, Bangladesh' },
-  { icon: FiMail, label: 'Email', value: 'shahrierasfak27@gmail.com' },
-  { icon: FiCalendar, label: 'Available', value: 'Immediately' },
-  { icon: FiBook, label: 'Goal', value: 'MSc in Europe (AI/ML)' },
+  { icon: FiMapPin, label: 'Location', value: 'Chittagong, Lakshmipur, Bangladesh' },
+  { icon: FiMail, label: 'Email', value: 'shahrierasfak27@gmail.com', value2: 'asfakcse027@gmail.com' },
+  { icon: FiPhone, label: 'Phone', value: '+8801796512473', value2: '01635828435' },
+  { icon: FiBook, label: 'Goal', value: 'AI Research & Application Development' },
 ];
 
 export default function About() {
@@ -45,79 +48,61 @@ export default function About() {
       <SectionTitle
         label="/ about me"
         title="The Engineer Behind the Code"
-        subtitle="Passion for systems, algorithms, and research — driven by a relentless curiosity."
+        subtitle="Curious about systems, algorithms, and applied AI research."
       />
 
       {/* Top: image + bio side by side */}
-      <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-start mb-14">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start mb-14">
 
-        {/* Image — left, 2 columns on lg */}
+        {/* Left: image + contact info stacked */}
         <motion.div
           initial={{ opacity: 0, x: -40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="lg:col-span-2 flex justify-center lg:justify-start"
+          className="lg:col-span-2"
         >
-          <div className="relative">
-            {/* Glow behind image */}
-            <div
-              className="absolute inset-0 rounded-3xl blur-2xl"
-              style={{
-                background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.25) 0%, rgba(239,68,68,0.1) 60%, transparent 80%)',
-                transform: 'scale(1.1)',
-              }}
-            />
-
-            {/* Image frame */}
-            <div
-              className="relative overflow-hidden"
-              style={{
-                width: 340,
-                height: 420,
-                borderRadius: 24,
-                border: '2px solid rgba(59,130,246,0.35)',
-                boxShadow:
-                  '0 0 0 6px rgba(59,130,246,0.08), 0 30px 80px rgba(0,0,0,0.7), 0 0 40px rgba(59,130,246,0.2)',
-              }}
-            >
-              <img
-                src={heroImg}
-                alt="Asfak Shahrier"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  objectPosition: 'top center',
-                }}
-              />
-              {/* Bottom gradient */}
+          <div className="w-full max-w-[360px] mx-auto lg:mx-0 space-y-5">
+            {/* Image */}
+            <div className="relative">
+              {/* Glow behind image */}
               <div
+                className="absolute inset-0 rounded-3xl blur-2xl"
                 style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '40%',
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
+                  background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.25) 0%, rgba(239,68,68,0.1) 60%, transparent 80%)',
+                  transform: 'scale(1.1)',
                 }}
               />
-              {/* Name overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="text-white font-bold text-lg">Asfak Shahrier</p>
-                <p className="text-blue-400 text-sm font-medium">Full Stack Engineer · Researcher</p>
-              </div>
-            </div>
 
-            {/* Decorative corner accent */}
-            <div
-              className="absolute -top-3 -right-3 w-16 h-16 rounded-2xl border-2 border-blue-500/30"
-              style={{ background: 'rgba(59,130,246,0.06)' }}
-            />
-            <div
-              className="absolute -bottom-3 -left-3 w-12 h-12 rounded-xl border-2 border-red-500/30"
-              style={{ background: 'rgba(239,68,68,0.06)' }}
-            />
+              {/* Image frame */}
+              <div
+                className="relative overflow-hidden w-full"
+                style={{
+                  aspectRatio: '34 / 42',
+                  borderRadius: 24,
+                  border: '2px solid rgba(59,130,246,0.35)',
+                  boxShadow:
+                    '0 0 0 6px rgba(59,130,246,0.08), 0 30px 80px rgba(0,0,0,0.7), 0 0 40px rgba(59,130,246,0.2)',
+                }}
+              >
+                <img
+                  src={heroImg}
+                  alt="Asfak Shahrier"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: 'top center' }}
+                />
+              </div>
+
+              {/* Decorative corner accents */}
+              <div
+                className="absolute -top-3 -right-3 w-16 h-16 rounded-2xl border-2 border-blue-500/30"
+                style={{ background: 'rgba(59,130,246,0.06)' }}
+              />
+              <div
+                className="absolute -bottom-3 -left-3 w-12 h-12 rounded-xl border-2 border-red-500/30"
+                style={{ background: 'rgba(239,68,68,0.06)' }}
+              />
+            </div>
           </div>
         </motion.div>
 
@@ -131,57 +116,79 @@ export default function About() {
         >
           <div className="space-y-5 text-gray-300 leading-relaxed text-base md:text-lg">
             <p>
-              I'm a Full Stack Software Engineer and ML Researcher, building production systems with{' '}
+              I'm a Software Engineer with hands-on experience building production web applications using{' '}
               <span className="text-blue-400 font-semibold">Laravel</span>,{' '}
               <span className="text-blue-400 font-semibold">Angular</span>, and{' '}
-              <span className="text-blue-400 font-semibold">Django</span> — and integrating AI via OpenAI and Gemini APIs.
+              <span className="text-blue-400 font-semibold">Django</span>, and integrating AI into them through the OpenAI and Gemini APIs.
             </p>
             <p>
-              My competitive programming journey — solving{' '}
-              <span className="text-white font-bold">3200+ problems</span> across Codeforces, LeetCode, CodeChef, and AtCoder —
-              sharpened my algorithmic thinking and ability to write optimized, correct code under pressure.
+              Years of competitive programming, with{' '}
+              <span className="text-white font-bold">3200+ problems</span> solved across Codeforces, LeetCode, CodeChef, and AtCoder,
+              sharpened my algorithmic thinking and my ability to write correct, optimized code under pressure.
             </p>
             <p>
-              I've authored 2 research papers: one{' '}
-              <span className="text-white font-bold">In Press</span> at Communications in Software and Systems (NPM link sharing),
-              and one <span className="text-white font-bold">Under Review</span> at IEEE (ML career prediction for CSE students).
-              Targeting <span className="text-white font-bold">MSc programs in Europe</span> with AI/ML focus.
+              I also enjoy research that turns into real products. I've authored 2 papers, one{' '}
+              <span className="text-white font-bold">In Press</span> at Communications in Software and Systems (NPM link sharing)
+              and one <span className="text-white font-bold">Under Review</span> at IEEE (ML based career prediction for CSE students),
+              and I love building AI applications on top of large language models.
+            </p>
+            <p>
+              What drives me is <span className="text-blue-400 font-semibold">applied AI</span>. Right now I'm deepening my{' '}
+              <span className="text-white font-bold">system design</span> skills and focusing on building{' '}
+              <span className="text-blue-400 font-semibold">AI-powered software</span> that's practical, scalable, and genuinely
+              useful to real users.
             </p>
           </div>
 
-          {/* Personal info grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            {personalInfo.map(({ icon: Icon, label, value }) => (
-              <div
-                key={label}
-                className="flex items-start gap-3 p-4 rounded-xl border border-white/8"
-                style={{ background: 'rgba(255,255,255,0.04)' }}
-              >
-                <div className="p-2.5 rounded-lg bg-blue-500/15 mt-0.5">
-                  <Icon size={15} className="text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">{label}</p>
-                  <p className="text-gray-200 text-sm font-semibold mt-0.5">{value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Current focus */}
-          <div
-            className="p-5 rounded-2xl border border-blue-500/20"
-            style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, transparent 100%)' }}
-          >
-            <p className="text-blue-400 text-xs font-mono font-semibold mb-3 uppercase tracking-widest">Current Focus</p>
-            <div className="flex flex-wrap gap-2">
-              {['MSc Applications', 'AI Integration', 'Competitive Programming', 'ML Research'].map((tag) => (
-                <Badge key={tag} color="blue" size="md">{tag}</Badge>
-              ))}
-            </div>
-          </div>
         </motion.div>
       </div>
+
+      {/* Current Focus — full width */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="p-5 rounded-2xl border border-blue-500/20 mb-6"
+        style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, transparent 100%)' }}
+      >
+        <p className="text-blue-400 text-xs font-mono font-semibold mb-3 uppercase tracking-widest">Current Focus</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {['AI & ML Enthusiast', 'Full Stack Development', 'AI Integration', 'ML Research', 'System Design'].map((tag) => (
+            <span
+              key={tag}
+              className="text-center px-3 py-2.5 rounded-lg text-sm font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/25 transition-colors hover:bg-blue-500/20 hover:border-blue-500/50"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Contact info — full-width 4-across row */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-14"
+      >
+        {personalInfo.map(({ icon: Icon, label, value, value2 }) => (
+          <div
+            key={label}
+            className="flex items-start gap-3 p-4 rounded-xl border border-white/8 bg-white/5 transition-colors hover:bg-white/[0.07] hover:border-blue-500/40"
+          >
+            <div className="p-2.5 rounded-lg bg-blue-500/15 mt-0.5 flex-shrink-0">
+              <Icon size={15} className="text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">{label}</p>
+              <p className="text-gray-200 text-sm font-semibold mt-0.5 break-words leading-snug">{value}</p>
+              {value2 && <p className="text-gray-400 text-xs mt-1 break-words leading-snug">{value2}</p>}
+            </div>
+          </div>
+        ))}
+      </motion.div>
 
       {/* Education */}
       <motion.div
@@ -208,7 +215,14 @@ export default function About() {
             <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
               <div>
                 <h4 className="text-white font-bold text-base leading-snug">{education[0].degree}</h4>
-                <p className="text-gray-400 text-sm mt-1">{education[0].institution}</p>
+                <a
+                  href={education[0].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 text-sm mt-1 inline-block hover:text-blue-400 transition-colors"
+                >
+                  {education[0].institution}
+                </a>
               </div>
               <Badge color="blue" size="sm">{education[0].period}</Badge>
             </div>
@@ -247,7 +261,14 @@ export default function About() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-white font-semibold text-sm leading-snug">{edu.degree}</p>
-                    <p className="text-gray-500 text-xs mt-1 leading-relaxed">{edu.institution}</p>
+                    <a
+                      href={edu.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-500 text-xs mt-1 leading-relaxed inline-block hover:text-blue-400 transition-colors"
+                    >
+                      {edu.institution}
+                    </a>
                   </div>
                 </div>
               </motion.div>

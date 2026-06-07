@@ -7,6 +7,7 @@ import Projects from './components/Projects/Projects';
 import Skills from './components/Skills/Skills';
 import Research from './components/Research/Research';
 import Achievements from './components/Achievements/Achievements';
+import Certificates from './components/Certificates/Certificates';
 import Contact from './components/Contact/Contact';
 
 import section1 from './assets/section1.jpg';
@@ -116,6 +117,11 @@ function App() {
         <SectionDivider flip />
         <AltSection bgImg={section2} bgPos="top-left">
           <Achievements />
+        </AltSection>
+
+        <SectionDivider flip />
+        <AltSection dark bgImg={section3} bgPos="top-right">
+          <Certificates />
         </AltSection>
 
         <SectionDivider />

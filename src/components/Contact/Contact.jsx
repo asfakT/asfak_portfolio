@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
 import {
-  FiMail, FiGithub, FiLinkedin, FiTwitter, FiArrowRight,
-  FiFacebook, FiArrowUpCircle, FiMapPin, FiSend,
+  FiMail, FiGithub, FiLinkedin, FiArrowRight,
+  FiArrowUpCircle, FiMapPin, FiSend, FiPhone,
 } from 'react-icons/fi';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaMedium } from 'react-icons/fa';
 import { SiCodeforces } from 'react-icons/si';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
@@ -26,20 +26,12 @@ const socialLinks = [
     accent: '#0A66C2',
   },
   {
-    label: 'Twitter / X',
-    handle: '@asfak_dev',
-    href: '#',
-    icon: FiTwitter,
-    color: '#7dd3fc',
-    accent: '#1DA1F2',
-  },
-  {
-    label: 'Facebook',
-    handle: 'Asfak Shahrier',
-    href: '#',
-    icon: FiFacebook,
-    color: '#93c5fd',
-    accent: '#1877F2',
+    label: 'Medium',
+    handle: '@shahrierasfak27',
+    href: 'https://medium.com/@shahrierasfak27',
+    icon: FaMedium,
+    color: '#86efac',
+    accent: '#1A8917',
   },
   {
     label: 'WhatsApp',
@@ -49,35 +41,27 @@ const socialLinks = [
     color: '#86efac',
     accent: '#25D366',
   },
-  {
-    label: 'Codeforces',
-    handle: 'Asfak_Shahrier',
-    href: 'https://codeforces.com/profile/Asfak_Shahrier',
-    icon: SiCodeforces,
-    color: '#fca5a5',
-    accent: '#EF4444',
-  },
 ];
 
 const openTo = [
   {
     icon: '🎓',
     title: 'MSc Applications',
-    desc: 'ML, Algorithms, or Systems programs in Germany, Netherlands, UK',
+    desc: 'MSc in AI / Machine Learning and related CS programs',
   },
   {
     icon: '💼',
     title: 'Engineering Roles',
-    desc: 'Senior full stack, backend, or ML engineering at product companies',
+    desc: 'Full stack, backend, or ML engineering at product companies',
   },
   {
     icon: '🔬',
     title: 'Research Collaboration',
-    desc: 'Joint research in ML / NLP / Computer Vision applications',
+    desc: 'Joint research in ML / NLP and applied AI',
   },
 ];
 
-const navLinks = ['Home', 'About', 'Experience', 'Projects', 'Skills', 'Research', 'Achievements'];
+const navLinks = ['Home', 'About', 'Experience', 'Projects', 'Skills', 'Research', 'Achievements', 'Certificates'];
 
 export default function Contact() {
   return (
@@ -85,7 +69,7 @@ export default function Contact() {
       <SectionTitle
         label="/ contact"
         title="Let's Work Together"
-        subtitle="Open to MSc opportunities, top engineering roles, and interesting collaborations."
+        subtitle="Have an opportunity or idea in mind? Let's talk."
       />
 
       {/* ── Email CTA banner ── */}
@@ -247,7 +231,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-white font-bold text-base">Asfak Shahrier</p>
-                <p className="text-gray-400 text-xs">Full Stack Engineer · Researcher</p>
+                <p className="text-gray-400 text-xs">Software Engineer · AI &amp; ML Enthusiast</p>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
@@ -291,14 +275,33 @@ export default function Contact() {
                 <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <FiMail size={14} className="text-blue-400" />
                 </div>
-                <span className="text-sm">shahrierasfak27@gmail.com</span>
+                <span className="text-sm break-all">shahrierasfak27@gmail.com</span>
               </a>
-              <div className="flex items-center gap-3 text-gray-400">
-                <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <span className="w-3.5 h-3.5 block text-center text-green-400 text-xs font-bold">✓</span>
+              <a
+                href="tel:+8801796512473"
+                className="flex items-center gap-3 text-gray-400 hover:text-blue-400 transition-colors duration-200 group"
+              >
+                <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <FiPhone size={14} className="text-blue-400" />
                 </div>
-                <span className="text-sm">Open to remote &amp; relocation</span>
-              </div>
+                <span className="text-sm">+880 1796512473</span>
+              </a>
+            </div>
+
+            {/* Social icons */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {socialLinks.map(({ label, href, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition-all duration-200"
+                >
+                  <Icon size={16} />
+                </a>
+              ))}
             </div>
           </div>
         </div>

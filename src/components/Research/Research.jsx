@@ -5,13 +5,19 @@ import SectionTitle from '../ui/SectionTitle';
 import Badge from '../ui/Badge';
 import { researchPapers, researchInterests } from '../../data/research';
 
-const researchImages = [
-  'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=900&q=80',
-  'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=900&q=80',
-];
+const colorHex = { blue: '#3B82F6', red: '#EF4444' };
+
+// Status pill styling — In Press (accepted) is stronger than Under Review
+const statusStyle = {
+  'Published':    { cls: 'bg-green-500/20 text-green-300 border-green-500/30',  Icon: FiCheckCircle },
+  'In Press':     { cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30',     Icon: FiCheckCircle },
+  'Under Review': { cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', Icon: FiClock },
+};
 
 function PaperCard({ paper, index }) {
-  const isPublished = paper.status === 'Published';
+  const c = colorHex[paper.color] || '#3B82F6';
+  const st = statusStyle[paper.status] || statusStyle['Under Review'];
+  const StatusIcon = st.Icon;
 
   return (
     <motion.div
@@ -22,22 +28,24 @@ function PaperCard({ paper, index }) {
       className="overflow-hidden rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
       style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
     >
-      {/* Paper image */}
-      <div className="relative h-44 overflow-hidden">
-        <img
-          src={researchImages[index % researchImages.length]}
-          alt={paper.title}
-          className="w-full h-full object-cover"
+      {/* Gradient header — no stock imagery */}
+      <div
+        className="relative h-28 overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${c}26 0%, rgba(10,11,18,0.4) 55%), radial-gradient(circle at 85% 25%, ${c}1f, transparent 55%)`,
+          borderBottom: `1px solid ${c}22`,
+        }}
+      >
+        {/* Watermark icon */}
+        <FiFileText
+          className="absolute -bottom-3 -left-2 opacity-[0.07]"
+          size={96}
+          style={{ color: c }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        {/* Status badge on image */}
+        {/* Status pill */}
         <div className="absolute top-4 right-4">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-            isPublished
-              ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-              : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-          }`}>
-            {isPublished ? <FiCheckCircle size={12} /> : <FiClock size={12} />}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-sm ${st.cls}`}>
+            <StatusIcon size={12} />
             {paper.status}
           </div>
         </div>
@@ -60,6 +68,9 @@ function PaperCard({ paper, index }) {
             <p className={`text-sm font-medium ${paper.color === 'blue' ? 'text-blue-400' : 'text-red-400'}`}>
               {paper.venue}
             </p>
+            {paper.supervisor && (
+              <p className="text-gray-500 text-xs mt-1">Supervised by {paper.supervisor}</p>
+            )}
           </div>
         </div>
 
@@ -98,16 +109,29 @@ function PaperCard({ paper, index }) {
               <Badge key={t} color="gray" size="sm">{t}</Badge>
             ))}
           </div>
-          {paper.doi && (
-            <a
-              href={paper.doi}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
-            >
-              DOI <FiExternalLink size={13} />
-            </a>
-          )}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {paper.pdf && (
+              <a
+                href={paper.pdf}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
+                style={{ color: c }}
+              >
+                <FiFileText size={14} /> Read Paper
+              </a>
+            )}
+            {paper.doi && (
+              <a
+                href={paper.doi}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors font-medium"
+              >
+                DOI <FiExternalLink size={13} />
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

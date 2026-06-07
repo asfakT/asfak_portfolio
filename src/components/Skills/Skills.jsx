@@ -4,11 +4,13 @@ import {
   SiLaravel, SiDjango, SiAngular, SiTailwindcss,
   SiNumpy, SiPandas, SiOpencv,
   SiMysql, SiGit, SiReact, SiDocker, SiFigma,
+  SiHtml5, SiBootstrap, SiScikitlearn, SiOpenai,
+  SiGooglegemini, SiJupyter,
 } from 'react-icons/si';
 import {
   FiCode, FiZap, FiCpu, FiTool, FiBarChart2,
   FiLayers, FiActivity, FiBox, FiServer,
-  FiStar, FiShield, FiDatabase,
+  FiStar, FiShield, FiDatabase, FiTerminal,
 } from 'react-icons/fi';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
@@ -16,7 +18,7 @@ import { skillCategories } from '../../data/skills';
 import skillsBg from '../../assets/skills_bg.png';
 
 // ── Category icon map ─────────────────────────────────────────────────────────
-const catIconMap = { code: FiCode, zap: FiZap, cpu: FiCpu, tool: FiTool };
+const catIconMap = { code: FiCode, zap: FiZap, cpu: FiCpu, tool: FiTool, aperture: FiActivity, shield: FiShield };
 
 // ── Category tag config ───────────────────────────────────────────────────────
 const categoryMeta = {
@@ -28,37 +30,50 @@ const categoryMeta = {
 
 // ── Per-skill icon + brand colors ─────────────────────────────────────────────
 const skillIconMap = {
-  'C / C++':        { icon: SiCplusplus,   bg: '#00427e', fg: '#ffffff' },
-  'Python':         { icon: SiPython,      bg: '#2b5b84', fg: '#FFD43B' },
-  'JavaScript':     { icon: SiJavascript,  bg: '#2f2a00', fg: '#F7DF1E' },
-  'TypeScript':     { icon: SiTypescript,  bg: '#1a3a5c', fg: '#3178C6' },
-  'PHP':            { icon: SiPhp,         bg: '#3a3475', fg: '#a6b0f0' },
-  'Laravel':        { icon: SiLaravel,     bg: '#3b0a09', fg: '#FF2D20' },
-  'Django':         { icon: SiDjango,      bg: '#0a1f15', fg: '#44B78B' },
-  'Angular':        { icon: SiAngular,     bg: '#3b0009', fg: '#DD0031' },
-  'Tailwind CSS':   { icon: SiTailwindcss, bg: '#0a1f29', fg: '#38BDF8' },
-  'NumPy':          { icon: SiNumpy,       bg: '#001820', fg: '#4DABCF' },
-  'Pandas':         { icon: SiPandas,      bg: '#13042e', fg: '#E70488' },
-  'Matplotlib':     { icon: FiBarChart2,   bg: '#0b1e2f', fg: '#6cb4e4' },
-  'OpenCV':         { icon: SiOpencv,      bg: '#1a0f3b', fg: '#9B72CF' },
-  'Data Structures':{ icon: FiLayers,      bg: '#0f1e35', fg: '#60A5FA' },
-  'Algorithms':     { icon: FiActivity,    bg: '#0f1e35', fg: '#60A5FA' },
-  'OOP':            { icon: FiBox,         bg: '#0f1e35', fg: '#60A5FA' },
-  'MySQL':          { icon: SiMysql,       bg: '#0d2035', fg: '#4479A1' },
-  'Git / GitHub':   { icon: SiGit,         bg: '#2e0f08', fg: '#F05032' },
-  'REST API':       { icon: FiServer,      bg: '#0f2418', fg: '#10B981' },
+  // Languages
+  'C / C++':            { icon: SiCplusplus,    bg: '#00427e', fg: '#ffffff' },
+  'Python':             { icon: SiPython,       bg: '#2b5b84', fg: '#FFD43B' },
+  'JavaScript':         { icon: SiJavascript,   bg: '#2f2a00', fg: '#F7DF1E' },
+  'TypeScript':         { icon: SiTypescript,   bg: '#1a3a5c', fg: '#3178C6' },
+  'PHP':                { icon: SiPhp,          bg: '#3a3475', fg: '#a6b0f0' },
+  // Web
+  'Tailwind CSS':       { icon: SiTailwindcss,  bg: '#0a1f29', fg: '#38BDF8' },
+  'HTML / CSS':         { icon: SiHtml5,        bg: '#2e1207', fg: '#E34F26' },
+  'REST API':           { icon: FiServer,       bg: '#0f2418', fg: '#10B981' },
+  'Django':             { icon: SiDjango,       bg: '#0a1f15', fg: '#44B78B' },
+  'Angular':            { icon: SiAngular,      bg: '#3b0009', fg: '#DD0031' },
+  'Laravel':            { icon: SiLaravel,      bg: '#3b0a09', fg: '#FF2D20' },
+  'Bootstrap':          { icon: SiBootstrap,    bg: '#1a0f2e', fg: '#A87FFB' },
+  'React':              { icon: SiReact,        bg: '#0a1f29', fg: '#61DAFB' },
+  // ML & Data Science
+  'Pandas':             { icon: SiPandas,       bg: '#13042e', fg: '#E70488' },
+  'Scikit-learn':       { icon: SiScikitlearn,  bg: '#2e1a00', fg: '#F7931E' },
+  'NumPy':              { icon: SiNumpy,        bg: '#001820', fg: '#4DABCF' },
+  'XGBoost':            { icon: FiActivity,     bg: '#1f0f2e', fg: '#b07be0' },
+  'Matplotlib':         { icon: FiBarChart2,    bg: '#0b1e2f', fg: '#6cb4e4' },
+  'Seaborn':            { icon: FiBarChart2,    bg: '#1f0f2e', fg: '#9b6dd6' },
+  'NLTK':               { icon: FiBox,          bg: '#1f0f2e', fg: '#9b6dd6' },
+  'OpenCV':             { icon: SiOpencv,       bg: '#1a0f3b', fg: '#9B72CF' },
+  // AI Integration
+  'OpenAI GPT API':     { icon: SiOpenai,       bg: '#0a1f18', fg: '#10A37F' },
+  'Google Gemini API':  { icon: SiGooglegemini, bg: '#0a142e', fg: '#8AB4F8' },
+  'LLM App Development':{ icon: FiCpu,          bg: '#2e0a0a', fg: '#f08a8a' },
+  // Tools & Infrastructure
+  'Git / GitHub':       { icon: SiGit,          bg: '#2e0f08', fg: '#F05032' },
+  'VS Code':            { icon: FiCode,         bg: '#0a1f29', fg: '#38BDF8' },
+  'MySQL / PostgreSQL': { icon: SiMysql,        bg: '#0d2035', fg: '#4479A1' },
+  'Jupyter Notebook':   { icon: SiJupyter,      bg: '#2e1407', fg: '#F37726' },
+  'LaTeX':              { icon: FiBox,          bg: '#0f2418', fg: '#10B981' },
+  'Figma':              { icon: SiFigma,        bg: '#2e0f08', fg: '#F24E1E' },
+  // CS Fundamentals
+  'Data Structures':    { icon: FiLayers,       bg: '#072a30', fg: '#22D3EE' },
+  'Algorithms':         { icon: FiActivity,     bg: '#072a30', fg: '#22D3EE' },
+  'OOP':                { icon: FiBox,          bg: '#072a30', fg: '#22D3EE' },
+  'Operating Systems':  { icon: FiTerminal,     bg: '#072a30', fg: '#22D3EE' },
 };
 
-// ── Proficiency helper ────────────────────────────────────────────────────────
-function prof(level) {
-  if (level >= 90) return { label: 'Expert',       color: '#3B82F6' };
-  if (level >= 80) return { label: 'Advanced',     color: '#10B981' };
-  return              { label: 'Intermediate',  color: '#F59E0B' };
-}
-
 // ── Single skill row ──────────────────────────────────────────────────────────
-function SkillRow({ name, level, index, barColor }) {
-  const p = prof(level);
+function SkillRow({ name, index }) {
   const ic = skillIconMap[name] || { icon: FiCode, bg: '#1a1a2e', fg: '#9ca3af' };
   const Icon = ic.icon;
 
@@ -67,48 +82,19 @@ function SkillRow({ name, level, index, barColor }) {
       initial={{ opacity: 0, x: -10 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.35, delay: index * 0.06 }}
-      className="grid items-center gap-2.5"
-      style={{ gridTemplateColumns: '30px 1fr auto 90px 36px' }}
+      transition={{ duration: 0.35, delay: index * 0.05 }}
+      className="group flex items-center gap-3 py-0.5"
     >
       {/* Brand icon */}
       <div
-        className="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0"
+        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
         style={{ background: ic.bg }}
       >
-        <Icon size={15} style={{ color: ic.fg }} />
+        <Icon size={16} style={{ color: ic.fg }} />
       </div>
 
       {/* Name */}
-      <span className="text-gray-200 text-sm font-medium truncate">{name}</span>
-
-      {/* Proficiency badge */}
-      <span
-        className="text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"
-        style={{ color: p.color, background: p.color + '18' }}
-      >
-        {p.label}
-      </span>
-
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-        <motion.div
-          initial={{ width: 0 }}
-          whileInView={{ width: `${level}%` }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: index * 0.07, ease: 'easeOut' }}
-          className="h-full rounded-full"
-          style={{
-            background: `linear-gradient(90deg, ${barColor}88, ${barColor})`,
-            boxShadow: `0 0 6px ${barColor}55`,
-          }}
-        />
-      </div>
-
-      {/* Percentage */}
-      <span className="text-[11px] font-mono text-right" style={{ color: 'rgba(255,255,255,0.35)' }}>
-        {level}%
-      </span>
+      <span className="text-gray-200 text-sm font-medium">{name}</span>
     </motion.div>
   );
 }
@@ -171,17 +157,13 @@ function CategoryCard({ category, index }) {
           </div>
         </div>
 
-        {/* Skill rows */}
-        <div className="space-y-3">
-          {category.skills.map((skill, i) => (
-            <SkillRow
-              key={skill.name}
-              name={skill.name}
-              level={skill.level}
-              index={i}
-              barColor={color}
-            />
-          ))}
+        {/* Skill grid — strongest first, 2 columns on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5">
+          {[...category.skills]
+            .sort((a, b) => b.level - a.level)
+            .map((skill, i) => (
+              <SkillRow key={skill.name} name={skill.name} index={i} />
+            ))}
         </div>
       </div>
     </motion.div>
@@ -222,7 +204,7 @@ export default function Skills() {
         subtitle="Technologies, frameworks, and tools I use to build and solve problems."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 items-start">
         {skillCategories.map((cat, i) => (
           <CategoryCard key={cat.category} category={cat} index={i} />
         ))}
@@ -234,27 +216,12 @@ export default function Skills() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 rounded-2xl"
+        className="flex flex-wrap items-center justify-center gap-4 px-5 py-3.5 rounded-2xl"
         style={{
           background: 'rgba(255,255,255,0.025)',
           border: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        {/* Proficiency legend */}
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="text-[11px] font-mono text-gray-500">// Proficiency Legend</span>
-          {[
-            { label: 'Expert',       color: '#3B82F6' },
-            { label: 'Advanced',     color: '#10B981' },
-            { label: 'Intermediate', color: '#F59E0B' },
-          ].map(p => (
-            <div key={p.label} className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-              <span className="text-xs text-gray-300 font-medium">{p.label}</span>
-            </div>
-          ))}
-        </div>
-
         {/* Loved tech icons */}
         <div className="flex items-center gap-2.5">
           <span className="text-[11px] font-mono text-gray-500">I love working with</span>

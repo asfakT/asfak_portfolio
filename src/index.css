@@ -124,7 +124,8 @@
   width: 20px !important;
   border-radius: 4px !important;
 }
-.swiper-button-next,
-.swiper-button-prev {
-  color: #3B82F6 !important;
+/* Equal-height project + certificate cards */
+.projects-swiper .swiper-slide,
+.cert-swiper .swiper-slide {
+  height: auto;
 }

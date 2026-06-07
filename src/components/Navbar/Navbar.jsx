@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX, FiDownload } from 'react-icons/fi';
+import { FiMenu, FiX } from 'react-icons/fi';
+import Logo from '../ui/Logo';
 
 const navLinks = [
   { href: '#home', label: 'Home' },
@@ -10,6 +11,7 @@ const navLinks = [
   { href: '#skills', label: 'Skills' },
   { href: '#research', label: 'Research' },
   { href: '#achievements', label: 'Achievements' },
+  { href: '#certificates', label: 'Certificates' },
   { href: '#contact', label: 'Contact' },
 ];
 
@@ -19,17 +21,19 @@ export default function Navbar() {
   const [active, setActive] = useState('home');
 
   useEffect(() => {
+    const sections = navLinks.map((l) => l.href.slice(1));
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
-      const sections = navLinks.map((l) => l.href.slice(1));
-      for (const id of [...sections].reverse()) {
+      let current = sections[0];
+      for (const id of sections) {
         const el = document.getElementById(id);
-        if (el && window.scrollY >= el.offsetTop - 120) {
-          setActive(id);
-          break;
+        if (el && el.getBoundingClientRect().top <= 130) {
+          current = id;
         }
       }
+      setActive(current);
     };
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -63,15 +67,12 @@ export default function Navbar() {
               onClick={(e) => { e.preventDefault(); handleNavClick('#home'); }}
               className="flex items-center gap-3 group flex-shrink-0"
             >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base text-white transition-all duration-300 group-hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  boxShadow: '0 0 18px rgba(59,130,246,0.4)',
-                }}
+              <span
+                className="transition-transform duration-300 group-hover:scale-105"
+                style={{ filter: 'drop-shadow(0 0 14px rgba(59,130,246,0.45))' }}
               >
-                AS
-              </div>
+                <Logo size={44} />
+              </span>
               <span className="hidden sm:block font-bold text-white text-lg tracking-tight">
                 Asfak<span className="text-blue-400">.dev</span>
               </span>
@@ -112,15 +113,7 @@ export default function Navbar() {
 
             {/* ── CTA + hamburger ── */}
             <div className="flex items-center gap-3">
-              <a
-                href="/resume.pdf"
-                download
-                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 text-[15px] font-medium text-gray-300 rounded-xl border border-white/15 hover:text-white hover:border-blue-500/40 transition-all duration-200"
-              >
-                <FiDownload size={15} />
-                Resume
-              </a>
-              <a
+<a
                 href="mailto:shahrierasfak27@gmail.com"
                 className="hidden md:inline-flex items-center px-5 py-2.5 text-[15px] font-semibold text-white rounded-xl transition-all duration-200 hover:scale-105"
                 style={{

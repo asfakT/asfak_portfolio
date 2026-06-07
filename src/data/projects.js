@@ -49,6 +49,11 @@ export const otherProjects = [
     title: 'IELTS Daily Tracker',
     description:
       'Full-stack IELTS prep tracker with AI-powered writing review using OpenAI GPT and Google Gemini APIs. Features daily practice logging, automated feedback, score tracking, and progress visualization.',
+    features: [
+      'AI writing review via OpenAI GPT + Google Gemini',
+      'Daily practice logging with automated feedback',
+      'Score tracking and progress visualization',
+    ],
     tech: ['Python', 'Laravel', 'OpenAI API', 'Google Gemini API', 'PostgreSQL', 'Tailwind CSS'],
     github: 'https://github.com/asfakT/IELTS_TRACKER_APP',
     live: null,
@@ -59,6 +64,11 @@ export const otherProjects = [
     title: 'E-commerce Platform',
     description:
       'Production-grade e-commerce platform with Angular frontend currently serving real users. Integrated product catalog, cart, and order management APIs with CI/CD workflow.',
+    features: [
+      'Angular frontend serving real users in production',
+      'Product catalog, cart and order management APIs',
+      'CI/CD deployment workflow with Git',
+    ],
     tech: ['Angular', 'Tailwind CSS', 'REST API'],
     github: 'https://github.com/asfakT/laravel-ecommerce-system',
     live: null,
@@ -69,8 +79,13 @@ export const otherProjects = [
     title: 'CareHUB — Salon & Parlor Booking',
     description:
       'Online booking system for finding, comparing, and booking salons based on reviews, pricing, and availability. Real-time time-slot booking with barber selection.',
+    features: [
+      'Real-time time-slot booking with barber selection',
+      'Compare salons by reviews, pricing and availability',
+      'Built with Django and PostgreSQL backend',
+    ],
     tech: ['Django', 'PostgreSQL', 'Tailwind CSS', 'JavaScript'],
-    github: 'https://github.com/asfakT/CareHUB',
+    github: 'https://github.com/asfak27/quantum-trio',
     live: null,
     tag: 'Web App',
   },

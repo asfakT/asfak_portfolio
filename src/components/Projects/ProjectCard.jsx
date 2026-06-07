@@ -2,6 +2,15 @@ import { motion } from 'framer-motion';
 import { FiGithub, FiExternalLink } from 'react-icons/fi';
 import Badge from '../ui/Badge';
 
+// Category tag → badge color
+const tagColor = {
+  'ML / Research': 'red',
+  'Full Stack': 'blue',
+  'AI / Web': 'purple',
+  'Production': 'green',
+  'Web App': 'blue',
+};
+
 export function FeaturedProjectCard({ project, index }) {
   const isEven = index % 2 === 0;
 
@@ -104,9 +113,7 @@ export function SmallProjectCard({ project }) {
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/25">
-          <FiGithub size={17} className="text-blue-400" />
-        </div>
+        {project.tag && <Badge color={tagColor[project.tag] || 'gray'} size="sm">{project.tag}</Badge>}
         <div className="flex gap-2">
           {project.github && (
             <a href={project.github} target="_blank" rel="noopener noreferrer"
@@ -123,8 +130,16 @@ export function SmallProjectCard({ project }) {
         </div>
       </div>
 
-      <h4 className="text-white font-bold text-base mb-2.5 leading-snug">{project.title}</h4>
-      <p className="text-gray-300 text-sm leading-relaxed flex-1 mb-4">{project.description}</p>
+      <h4 className="text-white font-bold text-base mb-3 leading-snug">{project.title}</h4>
+
+      <ul className="space-y-2 flex-1 mb-4">
+        {(project.features || []).slice(0, 3).map((f) => (
+          <li key={f} className="text-gray-300 text-sm flex items-start gap-2 leading-snug">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-500" />
+            <span className="line-clamp-2">{f}</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="flex flex-wrap gap-1.5 mt-auto">
         {project.tech.slice(0, 4).map((t) => (

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiGithub, FiLinkedin, FiArrowRight, FiDownload } from 'react-icons/fi';
+import { FaMedium } from 'react-icons/fa';
 import heroImg from '../../assets/hero_image1.jpeg';
 import Button from '../ui/Button';
 
 const roles = [
   'Software Engineer',
-  'Full Stack Web Developer',
-  'Programmer',
-  'Problem Solver',
+  'Full Stack Developer',
+  'Competitive Programmer',
+  'AI App Developer',
+  'AI & Machine Learning Enthusiast',
 ];
 
 const stats = [
@@ -77,7 +79,7 @@ export default function Hero() {
       <div className="absolute bottom-1/4 -right-48 w-[500px] h-[500px] bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-28 pb-20">
-        <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-start">
 
           {/* ── LEFT: text content ── */}
           <motion.div
@@ -90,13 +92,13 @@ export default function Hero() {
             <motion.div variants={itemVariants}>
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/25 text-green-400 text-sm font-medium">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Open to Opportunities & MSc Applications
+                Open to Opportunities
               </span>
             </motion.div>
 
             {/* Name */}
             <motion.div variants={itemVariants}>
-              <h1 className="text-5xl md:text-6xl lg:text-6xl font-extrabold leading-none tracking-tight text-white">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl font-extrabold leading-none tracking-tight text-white">
                 Asfak
                 
                 <span className="text-gradient-mixed"> Shahrier</span>
@@ -105,7 +107,7 @@ export default function Hero() {
 
             {/* Typewriter role */}
             <motion.div variants={itemVariants}>
-              <p className="text-2xl md:text-3xl font-semibold text-gray-200 font-mono">
+              <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-200 font-mono">
                 I'm a <TypeWriter words={roles} />
               </p>
             </motion.div>
@@ -115,9 +117,14 @@ export default function Hero() {
               variants={itemVariants}
               className="text-gray-300 text-lg md:text-xl leading-relaxed max-w-lg"
             >
-              Building high-performance web systems with <span className="text-blue-400 font-semibold">Laravel & React</span>,
-              solving <span className="text-white font-bold">3200+</span> algorithmic challenges,
-              and researching ML applications — targeting MSc in Europe and top-tier roles.
+              Building production web apps with <span className="text-blue-400 font-semibold">Laravel, Angular & React</span>,
+              backed by strong <span className="text-white font-bold">competitive programming</span> fundamentals
+              and hands-on <span className="text-blue-400 font-semibold">AI integration</span>.
+            </motion.p>
+
+            {/* Stack micro-line */}
+            <motion.p variants={itemVariants} className="text-gray-500 text-sm font-mono tracking-wide">
+              Laravel · Angular · React · Python · OpenAI · Gemini
             </motion.p>
 
             {/* CTAs */}
@@ -134,7 +141,7 @@ export default function Hero() {
             </motion.div>
 
             {/* Social row */}
-            <motion.div variants={itemVariants} className="flex items-center gap-4 pt-1">
+            <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4 pt-1">
               <a
                 href="https://github.com/asfakT"
                 target="_blank"
@@ -152,6 +159,15 @@ export default function Hero() {
                 aria-label="LinkedIn"
               >
                 <FiLinkedin size={20} />
+              </a>
+              <a
+                href="https://medium.com/@shahrierasfak27"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 rounded-xl border border-white/10 text-gray-300 hover:text-white hover:border-blue-500/60 hover:bg-blue-500/10 transition-all duration-200"
+                aria-label="Medium"
+              >
+                <FaMedium size={20} />
               </a>
               <span className="h-px w-10 bg-white/10" />
               <span className="text-gray-500 text-sm">shahrierasfak27@gmail.com</span>
@@ -194,18 +210,18 @@ export default function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.9 }}
-          className="mt-20 grid grid-cols-3 gap-4"
+          className="mt-16 sm:mt-20 grid grid-cols-3 gap-3 sm:gap-4"
         >
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="text-center p-5 rounded-2xl border border-white/8 hover:border-blue-500/30 transition-colors"
+              className="text-center p-3 sm:p-5 rounded-2xl border border-white/8 hover:border-blue-500/30 transition-colors"
               style={{ background: 'rgba(255,255,255,0.03)' }}
             >
-              <p className={`text-3xl md:text-4xl font-extrabold ${stat.color === 'blue' ? 'text-gradient-blue' : 'text-gradient-red'}`}>
+              <p className={`text-2xl sm:text-3xl md:text-4xl font-extrabold ${stat.color === 'blue' ? 'text-gradient-blue' : 'text-gradient-red'}`}>
                 {stat.value}
               </p>
-              <p className="text-gray-400 text-sm mt-1.5 font-medium">{stat.label}</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1.5 font-medium">{stat.label}</p>
             </div>
           ))}
         </motion.div>
