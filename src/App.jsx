@@ -9,6 +9,7 @@ import Research from './components/Research/Research';
 import Achievements from './components/Achievements/Achievements';
 import Certificates from './components/Certificates/Certificates';
 import Contact from './components/Contact/Contact';
+import ChatWidget from './components/Chat/ChatWidget';
 
 import section1 from './assets/section1.jpg';
 import section2 from './assets/section2.jpg';
@@ -129,6 +130,7 @@ function App() {
           <Contact />
         </AltSection>
       </main>
+      <ChatWidget />
     </div>
   );
 }
