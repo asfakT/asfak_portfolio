@@ -2,6 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMessageCircle, FiX, FiSend } from 'react-icons/fi';
 import { FaRobot } from 'react-icons/fa';
+import ReactMarkdown from 'react-markdown';
+
+const mdComponents = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline">
+      {children}
+    </a>
+  ),
+};
 
 const GREETING = {
   role: 'bot',
@@ -44,6 +53,11 @@ export default function ChatWidget() {
   async function send(text) {
     const q = (text ?? input).trim();
     if (!q || loading) return;
+    // recent turns for context (maps bot->assistant); excludes the message we're sending now
+    const history = messages
+      .filter((m) => m.role === 'user' || m.role === 'bot')
+      .slice(-6)
+      .map((m) => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setInput('');
     setLoading(true);
@@ -51,7 +65,7 @@ export default function ChatWidget() {
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({ message: q, history }),
       });
       const data = await r.json();
       const reply = r.ok ? data.reply : (data.error || 'Something went wrong.');
@@ -147,7 +161,13 @@ export default function ChatWidget() {
                       border: m.role === 'bot' ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     }}
                   >
-                    {m.text}
+                    {m.role === 'bot' ? (
+                      <div className="chat-md">
+                        <ReactMarkdown components={mdComponents}>{m.text}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      m.text
+                    )}
                   </div>
                 </div>
               ))}
