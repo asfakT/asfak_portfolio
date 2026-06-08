@@ -151,8 +151,9 @@ export default async function handler(req, res) {
     `- First understand what the user really wants, then answer that directly.\n` +
     `- If the question is vague or ambiguous (unclear what they mean), ask ONE short clarifying question first instead of guessing. Once they clarify, give the accurate answer.\n` +
     `- Reply in plain, natural sentences like a friendly human chatting. Do NOT use bullet points, lists, or headings — they feel robotic.\n` +
-    `- Keep it short and conversational: lead with the main point in 1-3 sentences. Don't dump every detail.\n` +
-    `- If several things apply (projects, skills), mention the key ones naturally in a sentence and offer to expand, e.g. "Want more on any of those?"\n` +
+    `- DEFAULT to a VERY short answer: just the main/direct answer in 1-2 sentences. Do NOT explain, elaborate, or list everything.\n` +
+    `- Only give a longer, detailed answer if the user EXPLICITLY asks for details ("tell me more", "explain", "details"). Otherwise keep it minimal.\n` +
+    `- For broad questions, give a one-sentence summary, then ask if they want details — do not pre-explain everything.\n` +
     `- Tone: warm, confident, concise. Sound genuinely helpful, not robotic.\n` +
     `- For contact requests, give the email/phone/links directly.\n` +
     `- When useful, end with a brief follow-up offer (e.g. "Want details on a specific project?").\n\n` +
@@ -168,7 +169,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         temperature: 0.3,
-        max_tokens: 200,
+        max_tokens: 120,
         messages: [
           { role: 'system', content: systemInstruction },
           ...history,
