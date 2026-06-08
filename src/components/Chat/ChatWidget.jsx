@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMessageCircle, FiX, FiSend } from 'react-icons/fi';
+import { FiMessageCircle, FiX, FiSend, FiMic, FiVolume2, FiVolumeX } from 'react-icons/fi';
 import { FaRobot } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
+
+const SpeechRec =
+  typeof window !== 'undefined'
+    ? window.SpeechRecognition || window.webkitSpeechRecognition
+    : null;
 
 const mdComponents = {
   a: ({ href, children }) => (
@@ -39,8 +44,62 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Text-to-speech: read a reply aloud (strip markdown first)
+  function speak(text) {
+    if (!voiceOn || typeof window === 'undefined' || !window.speechSynthesis) return;
+    const clean = text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links -> text
+      .replace(/[*_`#>-]/g, '')
+      .trim();
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 1;
+    u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  }
+
+  // Speech-to-text: listen, then send the transcript
+  function startListening() {
+    if (!SpeechRec || listening) return;
+    const rec = new SpeechRec();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setListening(false);
+      send(transcript);
+    };
+    rec.onerror = (e) => {
+      setListening(false);
+      const msg =
+        e.error === 'not-allowed' || e.error === 'service-not-allowed'
+          ? 'Microphone is blocked. Allow mic permission in your browser (address-bar icon), then try again.'
+          : e.error === 'no-speech'
+          ? "I didn't catch that — tap the mic and speak again."
+          : 'Voice input failed. You can type your question instead.';
+      setMessages((m) => [...m, { role: 'bot', text: msg }]);
+    };
+    rec.onend = () => setListening(false);
+    recognitionRef.current = rec;
+    setListening(true);
+    try {
+      rec.start();
+    } catch {
+      setListening(false);
+    }
+  }
+
+  function toggleVoice() {
+    if (voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
+    setVoiceOn((v) => !v);
+  }
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
@@ -70,6 +129,7 @@ export default function ChatWidget() {
       const data = await r.json();
       const reply = r.ok ? data.reply : (data.error || 'Something went wrong.');
       setMessages((m) => [...m, { role: 'bot', text: reply }]);
+      speak(reply);
     } catch {
       setMessages((m) => [...m, { role: 'bot', text: 'Network error — please try again.' }]);
     } finally {
@@ -138,13 +198,25 @@ export default function ChatWidget() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                aria-label="Close chat"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-              >
-                <FiX size={18} />
-              </button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={toggleVoice}
+                  aria-label={voiceOn ? 'Mute voice' : 'Enable voice'}
+                  title={voiceOn ? 'Voice on — replies read aloud' : 'Voice off'}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                    voiceOn ? 'text-blue-400 hover:bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {voiceOn ? <FiVolume2 size={17} /> : <FiVolumeX size={17} />}
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close chat"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -211,9 +283,22 @@ export default function ChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={onKeyDown}
                   rows={1}
-                  placeholder="Ask about Asfak..."
+                  placeholder={listening ? 'Listening… speak now' : 'Ask about Asfak...'}
                   className="chat-scroll flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-500 outline-none resize-none max-h-24 py-1"
                 />
+                {SpeechRec && (
+                  <button
+                    onClick={startListening}
+                    disabled={loading}
+                    aria-label="Speak"
+                    title="Speak your question"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                      listening ? 'text-white bg-red-500 animate-pulse' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <FiMic size={15} />
+                  </button>
+                )}
                 <button
                   onClick={() => send()}
                   disabled={!input.trim() || loading}
