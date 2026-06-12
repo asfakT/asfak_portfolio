@@ -169,6 +169,8 @@ function TrainingCard({ item, index }) {
 }
 
 function CPPlatformCard({ platform, index }) {
+  const single = platform.rating == null && platform.contests == null;
+  const Logo = platformLogo[platform.platform];
   return (
     <motion.a
       href={platform.url}
@@ -178,73 +180,68 @@ function CPPlatformCard({ platform, index }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="block p-6 rounded-2xl border transition-all duration-300 group"
+      className="flex flex-col p-6 rounded-2xl border transition-all duration-300 group hover:border-white/20"
       style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
     >
-      {/* Platform header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
+      {/* Header: logo + name + view-profile link */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-base font-extrabold"
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-base font-extrabold flex-shrink-0"
             style={{ backgroundColor: platform.color + '28', border: `1.5px solid ${platform.color}55` }}
           >
-            {platformLogo[platform.platform]
-              ? (() => {
-                  const Logo = platformLogo[platform.platform];
-                  return <Logo size={24} style={{ color: platform.color }} />;
-                })()
-              : <span style={{ color: platform.color }}>{platform.icon}</span>}
+            {Logo ? <Logo size={24} style={{ color: platform.color }} /> : <span style={{ color: platform.color }}>{platform.icon}</span>}
           </div>
-          <div>
-            <p className="text-white font-bold text-base">{platform.platform}</p>
-            <p className="text-gray-400 text-sm font-mono">@{platform.handle}</p>
+          <div className="min-w-0">
+            <p className="text-white font-bold text-base truncate">{platform.platform}</p>
+            <p className="text-gray-400 text-sm font-mono truncate">@{platform.handle}</p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-gray-400 group-hover:text-white transition-colors whitespace-nowrap">
-          View Profile
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 group-hover:text-white transition-colors whitespace-nowrap flex-shrink-0">
+          View Profile <FiExternalLink size={12} />
         </span>
       </div>
 
-      {/* Stats row — single centered Solved when no rating/contests (e.g. CSES) */}
-      {platform.rating == null && platform.contests == null ? (
-        <div className="mb-4 p-3 rounded-xl text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="font-extrabold text-2xl" style={{ color: platform.color }}>{platform.problems}+</p>
-          <p className="text-gray-400 text-xs mt-0.5 font-medium">Problems Solved</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-3 mb-4 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <div className="text-center">
-            <p className="font-extrabold text-xl" style={{ color: platform.color }}>
-              {platform.rating || '—'}
-            </p>
-            <p className="text-gray-400 text-xs mt-0.5 font-medium">
-              {platform.maxRating > platform.rating ? `Rating · max ${platform.maxRating}` : 'Rating'}
-            </p>
-          </div>
-          <div className="text-center border-x" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-            <p className="text-white font-extrabold text-xl">{platform.problems}+</p>
-            <p className="text-gray-400 text-xs mt-0.5 font-medium">Solved</p>
-          </div>
-          <div className="text-center">
-            <p className="text-white font-extrabold text-xl">{platform.contests}+</p>
-            <p className="text-gray-400 text-xs mt-0.5 font-medium">Contests</p>
-          </div>
-        </div>
-      )}
-
-      {/* Rank badge */}
-      <div
-        className="text-center py-2.5 rounded-xl text-sm font-extrabold tracking-wide mb-4"
+      {/* Rank — compact pill, hugs content */}
+      <span
+        className="inline-flex self-start px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-4"
         style={{ backgroundColor: platform.color + '20', color: platform.color, border: `1px solid ${platform.color}35` }}
       >
         {platform.rank}
+      </span>
+
+      {/* Flat stat row — dividers only, no inner box */}
+      <div className="flex text-center py-4 border-y mb-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        {single ? (
+          <div className="flex-1">
+            <p className="font-extrabold text-2xl" style={{ color: platform.color }}>{platform.problems}+</p>
+            <p className="text-gray-400 text-xs mt-1 font-medium">Problems Solved</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1">
+              <p className="font-extrabold text-xl" style={{ color: platform.color }}>{platform.rating}</p>
+              <p className="text-gray-400 text-xs mt-1 font-medium">
+                {platform.maxRating != null ? `Rating · max ${platform.maxRating}` : 'Rating'}
+              </p>
+            </div>
+            <div className="flex-1 border-x" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <p className="text-white font-extrabold text-xl">{platform.problems}+</p>
+              <p className="text-gray-400 text-xs mt-1 font-medium">Solved</p>
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-extrabold text-xl">{platform.contests}+</p>
+              <p className="text-gray-400 text-xs mt-1 font-medium">Contests</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Highlights */}
       <ul className="space-y-2">
         {platform.highlights.map((h) => (
-          <li key={h} className="text-gray-300 text-sm flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: platform.color }} />
+          <li key={h} className="text-gray-300 text-sm flex items-start gap-2">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: platform.color }} />
             {h}
           </li>
         ))}
@@ -349,7 +346,7 @@ export default function Experience() {
             </div>
 
             {/* Platform cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
               {cpExperience.map((p, i) => (
                 <CPPlatformCard key={p.platform} platform={p} index={i} />
               ))}

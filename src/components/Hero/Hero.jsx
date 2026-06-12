@@ -125,11 +125,6 @@ export default function Hero() {
               and hands-on <span className="text-blue-400 font-semibold">AI integration</span>.
             </motion.p>
 
-            {/* Stack micro-line */}
-            <motion.p variants={itemVariants} className="text-gray-500 text-sm font-mono tracking-wide">
-              Laravel · Angular · React · Python · OpenAI · Gemini
-            </motion.p>
-
             {/* CTAs */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
               <Button href="#projects" variant="primary" className="text-base px-7 py-3.5">

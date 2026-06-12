@@ -91,7 +91,7 @@ export const cpExperience = [
     platform: 'CodeChef',
     handle: 'asfakcse027',
     rating: 1812,
-    maxRating: 1812,
+    maxRating: null,
     rank: '4★',
     problems: 500,
     contests: 87,

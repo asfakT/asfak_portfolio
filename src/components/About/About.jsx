@@ -114,8 +114,8 @@ export default function About() {
           transition={{ duration: 0.7 }}
           className="lg:col-span-3 space-y-6"
         >
-          <div className="space-y-5 text-gray-300 leading-relaxed text-base md:text-lg">
-            <p>
+          <div className="space-y-6 text-gray-300 leading-relaxed text-base md:text-lg max-w-[60ch]">
+            <p className="text-lg md:text-xl text-gray-200">
               I'm a Software Engineer with hands-on experience building production web applications using{' '}
               <span className="text-blue-400 font-semibold">Laravel</span>,{' '}
               <span className="text-blue-400 font-semibold">Angular</span>, and{' '}

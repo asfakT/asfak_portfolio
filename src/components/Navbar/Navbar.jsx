@@ -73,8 +73,9 @@ export default function Navbar() {
               >
                 <Logo size={44} />
               </span>
-              <span className="hidden sm:block font-bold text-white text-lg tracking-tight">
-                Asfak<span className="text-blue-400">.dev</span>
+              <span className="hidden sm:block text-sm font-semibold uppercase tracking-[0.2em]">
+                <span className="text-gray-200">Asfak</span>{' '}
+                <span className="text-gray-400">Shahrier</span>
               </span>
             </a>
 
