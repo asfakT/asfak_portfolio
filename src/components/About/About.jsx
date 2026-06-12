@@ -12,7 +12,7 @@ const education = [
     url: 'https://gstu.edu.bd/s/',
     period: '2020 — 2024',
     // gpa: 'CGPA 3.13 / 4.00',
-    highlights: ['Graduated Dec 2024', '2 Research Papers (In Press + Under Review)'],
+    highlights: ['Graduated Dec 2024', '2 Research Papers (1 Published, 1 Under Review)'],
     color: 'blue',
   },
   {
@@ -127,10 +127,10 @@ export default function About() {
               sharpened my algorithmic thinking and my ability to write correct, optimized code under pressure.
             </p>
             <p>
-              I also enjoy research that turns into real products. I've authored 2 papers, one{' '}
-              <span className="text-white font-bold">In Press</span> at Communications in Software and Systems (NPM link sharing)
-              and one <span className="text-white font-bold">Under Review</span> at IEEE (ML based career prediction for CSE students),
-              and I love building AI applications on top of large language models.
+              I also enjoy research that turns into real products. I've{' '}
+              <span className="text-white font-bold">published</span> a paper at Communications in Software and Systems
+              (NPM link-sharing), with another <span className="text-white font-bold">under review</span> at IEEE (ML-based
+              career prediction), and I love building AI applications on top of large language models.
             </p>
             <p>
               What drives me is <span className="text-blue-400 font-semibold">applied AI</span>. Right now I'm deepening my{' '}

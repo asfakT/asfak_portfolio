@@ -4,6 +4,7 @@ import { FiGithub, FiLinkedin, FiArrowRight, FiDownload } from 'react-icons/fi';
 import { FaMedium } from 'react-icons/fa';
 import heroImg from '../../assets/hero_image1.jpeg';
 import Button from '../ui/Button';
+import Particles from '../ui/Particles';
 
 const roles = [
   'Software Engineer',
@@ -72,6 +73,8 @@ export default function Hero() {
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
       style={{ background: '#0d0e14' }}
     >
+      {/* Animated particle network */}
+      <Particles />
       {/* Background grid */}
       <div className="absolute inset-0 grid-bg pointer-events-none" />
       {/* Glow blobs */}

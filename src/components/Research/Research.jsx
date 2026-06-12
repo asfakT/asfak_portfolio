@@ -28,20 +28,22 @@ function PaperCard({ paper, index }) {
       className="overflow-hidden rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
       style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
     >
-      {/* Gradient header — no stock imagery */}
-      <div
-        className="relative h-28 overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${c}26 0%, rgba(10,11,18,0.4) 55%), radial-gradient(circle at 85% 25%, ${c}1f, transparent 55%)`,
-          borderBottom: `1px solid ${c}22`,
-        }}
-      >
-        {/* Watermark icon */}
-        <FiFileText
-          className="absolute -bottom-3 -left-2 opacity-[0.07]"
-          size={96}
-          style={{ color: c }}
-        />
+      {/* Header — real paper image if provided, else gradient */}
+      <div className="relative h-60 overflow-hidden" style={{ borderBottom: `1px solid ${c}22` }}>
+        {paper.image ? (
+          <img src={paper.image} alt={paper.title} className="w-full h-full object-cover object-top" />
+        ) : (
+          <div
+            className="w-full h-full"
+            style={{
+              background: `linear-gradient(135deg, ${c}26 0%, rgba(10,11,18,0.4) 55%), radial-gradient(circle at 85% 25%, ${c}1f, transparent 55%)`,
+            }}
+          >
+            <FiFileText className="absolute -bottom-3 -left-2 opacity-[0.07]" size={96} style={{ color: c }} />
+          </div>
+        )}
+        {/* Readability overlay (darkens top/bottom over the white paper image) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/35 pointer-events-none" />
         {/* Status pill */}
         <div className="absolute top-4 right-4">
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-sm ${st.cls}`}>
@@ -50,8 +52,8 @@ function PaperCard({ paper, index }) {
           </div>
         </div>
         {/* Year */}
-        <div className="absolute bottom-4 left-5">
-          <p className="text-gray-400 text-xs font-mono">{paper.year}</p>
+        <div className="absolute bottom-3 left-5">
+          <p className="text-white/80 text-xs font-mono">{paper.year}</p>
         </div>
       </div>
 

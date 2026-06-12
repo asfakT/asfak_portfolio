@@ -61,7 +61,7 @@ export const achievements = [
     id: 6,
     title: '2 Research Papers',
     description:
-      'First-authored 2 research papers: one In Press at Communications in Software and Systems, one Under Review at IEEE.',
+      'First-authored 2 research papers: one Published in Communications in Software and Systems (indexed in Scopus & Web of Science), one Under Review at IEEE.',
     category: 'Research',
     year: 2025,
     icon: '📄',
