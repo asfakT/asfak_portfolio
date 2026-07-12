@@ -107,44 +107,54 @@ export function FeaturedProjectCard({ project, index }) {
 export function SmallProjectCard({ project }) {
   return (
     <motion.div
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.2 }}
-      className="h-full p-5 rounded-2xl border transition-all duration-300 flex flex-col hover:border-blue-500/30"
+      className="h-full rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-blue-500/30 group"
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
-      <div className="flex items-start justify-between mb-4">
-        {project.tag && <Badge color={tagColor[project.tag] || 'gray'} size="sm">{project.tag}</Badge>}
-        <div className="flex gap-2">
-          {project.github && (
-            <a href={project.github} target="_blank" rel="noopener noreferrer"
-              className="text-gray-500 hover:text-gray-200 transition-colors">
-              <FiGithub size={17} />
-            </a>
-          )}
-          {project.live && (
-            <a href={project.live} target="_blank" rel="noopener noreferrer"
-              className="text-gray-500 hover:text-blue-400 transition-colors">
-              <FiExternalLink size={17} />
-            </a>
-          )}
+      {project.image && (
+        <div className="aspect-video w-full overflow-hidden">
+          <img
+            src={project.image}
+            alt={project.title}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
         </div>
-      </div>
+      )}
 
-      <h4 className="text-white font-bold text-base mb-3 leading-snug">{project.title}</h4>
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex items-start justify-between mb-4">
+          {project.tag && <Badge color={tagColor[project.tag] || 'gray'} size="sm">{project.tag}</Badge>}
+          <div className="flex gap-2">
+            {project.github && (
+              <a href={project.github} target="_blank" rel="noopener noreferrer"
+                className="text-gray-500 hover:text-gray-200 transition-colors">
+                <FiGithub size={17} />
+              </a>
+            )}
+            {project.live && (
+              <a href={project.live} target="_blank" rel="noopener noreferrer"
+                className="text-gray-500 hover:text-blue-400 transition-colors">
+                <FiExternalLink size={17} />
+              </a>
+            )}
+          </div>
+        </div>
 
-      <ul className="space-y-2 flex-1 mb-4">
-        {(project.features || []).slice(0, 3).map((f) => (
-          <li key={f} className="text-gray-300 text-sm flex items-start gap-2 leading-snug">
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-500" />
-            <span className="line-clamp-2">{f}</span>
-          </li>
-        ))}
-      </ul>
+        <h4 className="text-white font-bold text-base mb-3 leading-snug transition-colors duration-300 group-hover:text-blue-400">{project.title}</h4>
 
-      <div className="flex flex-wrap gap-1.5 mt-auto">
-        {project.tech.slice(0, 4).map((t) => (
-          <Badge key={t} color="gray" size="sm">{t}</Badge>
-        ))}
+        <ul className="space-y-2 flex-1 mb-4">
+          {(project.features || []).slice(0, 3).map((f) => (
+            <li key={f} className="text-gray-300 text-sm flex items-start gap-2 leading-snug">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-500" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex flex-wrap gap-1.5 mt-auto">
+          {project.tech.map((t) => (
+            <Badge key={t} color="gray" size="sm">{t}</Badge>
+          ))}
+        </div>
       </div>
     </motion.div>
   );

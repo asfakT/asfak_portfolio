@@ -1,44 +1,41 @@
+import learningEventBanner from '../assets/learning-event-banner.png';
+import ecommerceBanner from '../assets/ecommerce-banner.png';
+
 export const featuredProjects = [
   {
     id: 1,
-    title: 'CSE Career Prediction — ML Research',
+    title: 'Learning & Event Management Platform',
     description:
-      'First multi-label ML framework predicting career paths for 468 CSE students across 47 universities in Bangladesh. XGBoost achieved 61.70% accuracy, Recall 0.737, F1 Micro 0.792. Submitted to IEEE.',
+      'Production Laravel 10 e-learning and live-event platform with course authoring, drip content, live-event ticketing, cart/coupon checkout, and Stripe payments.',
     longDescription:
-      'Proposed the first multi-label career prediction framework for CSE undergraduates in Bangladesh using real survey data. Collected 24 features including CGPA, technical skills, soft skills, research experience, and preferred job sectors. Benchmarked 10 classifiers.',
+      'Production Laravel 10 e-learning and live-event platform with course authoring, drip content, and live-event ticketing. Automated transactional email lifecycle, PDF certificate/invoice generation, and real-time notifications via Pusher/Echo.',
     features: [
-      '468 students surveyed across 47 universities in Bangladesh',
-      'XGBoost best: accuracy 61.70%, Recall 0.737, F1 Micro 0.792, Hamming Loss 0.060',
-      '10 ML models: XGBoost, Random Forest, SVM, Neural Network, KNN, Voting Ensembles',
-      '24 features including CGPA, skills, research experience, preferred job sectors',
-      'Submitted to IEEE Conference — Under Review',
+      'Production Laravel 10 e-learning and live-event platform with course authoring, drip content, live-event ticketing, cart/coupon checkout, and Stripe payments',
+      'Automated transactional email lifecycle, PDF certificate/invoice generation, and real-time notifications via Pusher/Echo',
     ],
-    tech: ['Python', 'XGBoost', 'Scikit-learn', 'Pandas', 'NumPy', 'Matplotlib'],
-    github: 'https://github.com/asfakT/ml-data-analysis-collection',
-    live: null,
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
-    tag: 'ML / Research',
-    color: 'red',
+    tech: ['Laravel 10', 'PHP 8.1', 'Blade', 'Alpine.js', 'Bootstrap', 'Stripe', 'dompdf', 'Pusher/Echo', 'MySQL'],
+    github: null,
+    live: 'https://altrainer.com/',
+    image: learningEventBanner,
+    tag: 'Production',
+    color: 'blue',
   },
   {
     id: 2,
-    title: 'LMS — Learning Management System',
+    title: 'E-commerce Platform',
     description:
-      'Production LMS handling course management, student enrollment, assignment submission, and email notification system. Built with admin dashboard and currently live in production.',
+      'Production e-commerce frontend serving real users — Angular 17 SSR app with full buyer flow: inventory browsing, product customization, cart, checkout, and order management APIs.',
     longDescription:
-      'Developed full frontend for a production LMS with course management, student enrollment, assignment submission, and email notifications. Admin dashboard manages students, courses, and progress tracking with full Laravel API backend integration.',
+      'Production e-commerce frontend serving real users. Angular 17 SSR app with full buyer flow including inventory browsing, product customization, cart, checkout, and order management APIs. NgRx state management, multi-language (i18n), light/dark theming, and secure auth with route guards.',
     features: [
-      'Course management and student enrollment system',
-      'Assignment submission and grading with email notifications',
-      'Admin dashboard for students, courses, and progress tracking',
-      'Backend integration with Laravel REST APIs',
-      'Currently live in production',
+      'Production e-commerce frontend serving real users — Angular 17 SSR app with full buyer flow: inventory browsing, product customization, cart, checkout, and order management APIs',
+      'NgRx state management, multi-language (i18n), light/dark theming, secure auth with route guards, and unit/integration tests',
     ],
-    tech: ['Laravel', 'MySQL', 'Blade', 'Bootstrap'],
-    github: 'https://github.com/asfakT/lms-react-laravel',
-    live: null,
-    image: 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=800&q=80',
-    tag: 'Full Stack',
+    tech: ['Angular 17', 'SSR (Angular Universal)', 'NgRx', 'Tailwind CSS', 'TypeScript', 'REST API', 'Git'],
+    github: null,
+    live: 'https://thibstrailers.com/',
+    image: ecommerceBanner,
+    tag: 'Production',
     color: 'blue',
   },
 ];
@@ -57,22 +54,8 @@ export const otherProjects = [
     tech: ['Python', 'Laravel', 'OpenAI API', 'Google Gemini API', 'PostgreSQL', 'Tailwind CSS'],
     github: 'https://github.com/asfakT/IELTS_TRACKER_APP',
     live: null,
+    image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&q=80',
     tag: 'AI / Web',
-  },
-  {
-    id: 4,
-    title: 'E-commerce Platform',
-    description:
-      'Production-grade e-commerce platform with Angular frontend currently serving real users. Integrated product catalog, cart, and order management APIs with CI/CD workflow.',
-    features: [
-      'Angular frontend serving real users in production',
-      'Product catalog, cart and order management APIs',
-      'CI/CD deployment workflow with Git',
-    ],
-    tech: ['Angular', 'Tailwind CSS', 'REST API'],
-    github: 'https://github.com/asfakT/laravel-ecommerce-system',
-    live: null,
-    tag: 'Production',
   },
   {
     id: 5,
@@ -87,6 +70,7 @@ export const otherProjects = [
     tech: ['Django', 'PostgreSQL', 'Tailwind CSS', 'JavaScript'],
     github: 'https://github.com/asfak27/quantum-trio',
     live: null,
+    image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80',
     tag: 'Web App',
   },
 ];
