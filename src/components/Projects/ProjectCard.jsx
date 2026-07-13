@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiGithub, FiExternalLink } from 'react-icons/fi';
 import Badge from '../ui/Badge';
+import ProjectDetailsModal from './ProjectDetailsModal';
 
 // Category tag → badge color
-const tagColor = {
+export const tagColor = {
   'ML / Research': 'green',
+  'ML / Data Analysis': 'green',
   'Full Stack': 'blue',
   'AI / Web': 'green',
   'Production': 'green',
@@ -105,9 +108,21 @@ export function FeaturedProjectCard({ project, index }) {
 }
 
 export function SmallProjectCard({ project }) {
+  const [open, setOpen] = useState(false);
   return (
+    <>
     <motion.div
-      className="h-full rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-blue-500/30 group"
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${project.title}`}
+      onClick={() => setOpen(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setOpen(true);
+        }
+      }}
+      className="h-full rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-blue-500/30 focus:border-blue-500/50 focus:outline-none group cursor-pointer"
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       {project.image && (
@@ -126,12 +141,14 @@ export function SmallProjectCard({ project }) {
           <div className="flex gap-2">
             {project.github && (
               <a href={project.github} target="_blank" rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="text-gray-500 hover:text-gray-200 transition-colors">
                 <FiGithub size={17} />
               </a>
             )}
             {project.live && (
               <a href={project.live} target="_blank" rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="text-gray-500 hover:text-blue-400 transition-colors">
                 <FiExternalLink size={17} />
               </a>
@@ -157,5 +174,8 @@ export function SmallProjectCard({ project }) {
         </div>
       </div>
     </motion.div>
+
+    {open && <ProjectDetailsModal project={project} onClose={() => setOpen(false)} />}
+    </>
   );
 }

@@ -73,4 +73,73 @@ export const otherProjects = [
     image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80',
     tag: 'Web App',
   },
+  {
+    id: 6,
+    title: 'Machine Learning Mini-Projects',
+    description:
+      'A collection of 7 machine learning projects from data-analysis practice, covering classification, regression, NLP, and multi-label prediction with Python and Scikit-learn.',
+    longDescription:
+      'A collection of 7 end-to-end machine learning and data-analysis projects covering data preprocessing and cleaning (statistical imputation, text vectorization), exploratory data analysis (correlation maps and pair plots), and model selection across Naive Bayes, SVM, Linear Regression, Random Forest, Gradient Boosting, and Voting Classifiers. Every notebook runs directly in Google Colab.',
+    features: [
+      'Classification: diabetes, loan approval, wine quality, spam mail (Naive Bayes, Logistic Regression, SVM, Random Forest)',
+      'Regression: car price prediction (Linear Regression)',
+      'NLP: SMS spam detection with tokenization and imbalanced-class handling',
+    ],
+    subProjects: [
+      {
+        name: 'Diabetes Prediction',
+        description:
+          'Clinical classification of diabetic patients using Naive Bayes, Random Forest, and tuned Logistic Regression.',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project1_Diabetes/Project1_Diabetes.ipynb',
+      },
+      {
+        name: 'Car Price Prediction',
+        description:
+          'Regression on vehicle features to estimate automotive market price using Linear Regression.',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project2_Car_prize_prediction/LinearRegression.ipynb',
+      },
+      {
+        name: 'Spam Mail Detection',
+        description:
+          'Text-classification pipeline separating spam from normal mail using NLP feature matrices and Logistic Regression.',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project3_Spam_mail/Logistic_Regression.ipynb',
+      },
+      {
+        name: 'Loan Prediction',
+        description:
+          'Financial approval classification using Support Vector Machine (linear kernel).',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project4_Loan_Prediction/SVM.ipynb',
+      },
+      {
+        name: 'Wine Quality Prediction',
+        description:
+          'Multi-class classification with correlation analysis to judge wine quality metrics.',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project5_Wine_Quality_Prediction/wine_quality_prediction.ipynb',
+      },
+      {
+        name: 'SMS Spam Detection',
+        description:
+          'End-to-end NLP workflow with tokenization, imbalanced-class handling, and evaluation strategies.',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Project6_sms_spam_detection/sms_spam_detection.ipynb',
+      },
+      {
+        name: 'CSE Career Prediction',
+        description:
+          'Multi-label classification mapping student skills to career paths from Bangladesh survey data (also featured in Research).',
+        notebook:
+          'https://colab.research.google.com/github/asfak27/ml-data-analysis-collection/blob/main/Predicting_CSE_Undergraduat%27s_Students_career_based_on_skills_from_Bangladesh/r2_ML_part.ipynb',
+      },
+    ],
+    tech: ['Python', 'Pandas', 'NumPy', 'Scikit-learn', 'Matplotlib', 'Seaborn', 'Jupyter'],
+    github: 'https://github.com/asfak27/ml-data-analysis-collection',
+    live: null,
+    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80',
+    tag: 'ML / Data Analysis',
+  },
 ];

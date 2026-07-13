@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import { FiX, FiAward, FiEye, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import ViewAllButton from '../ui/ViewAllButton';
+import useModalDismiss from '../../hooks/useModalDismiss';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -25,14 +27,14 @@ const navBtn =
   'text-gray-300 transition-colors hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-white ' +
   'disabled:opacity-30 disabled:cursor-default';
 
-function CertModal({ cert, onClose }) {
+export function CertModal({ cert, onClose }) {
   const c = colorMap[cert.color] || colorMap.blue;
+  useModalDismiss(onClose);
 
   return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}
       onClick={onClose}
@@ -40,7 +42,6 @@ function CertModal({ cert, onClose }) {
       <motion.div
         initial={{ opacity: 0, scale: 0.88, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.88, y: 24 }}
         transition={{ type: 'spring', stiffness: 280, damping: 28 }}
         className="relative w-full max-w-4xl rounded-2xl overflow-hidden border flex flex-col"
         style={{ background: '#0d0d0d', borderColor: c.border, maxHeight: '92vh' }}
@@ -56,6 +57,17 @@ function CertModal({ cert, onClose }) {
             <p className="text-sm mt-0.5 font-medium" style={{ color: c.accent }}>
               {cert.issuer} · {cert.date}
             </p>
+            {cert.credentialUrl && (
+              <a
+                href={cert.credentialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+              >
+                <FiEye size={13} />
+                Verify Credential
+              </a>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -75,7 +87,7 @@ function CertModal({ cert, onClose }) {
   );
 }
 
-function CertCard({ cert, onClick }) {
+export function CertCard({ cert, onClick }) {
   const c = colorMap[cert.color] || colorMap.blue;
   return (
     <div
@@ -188,11 +200,13 @@ export default function Certificates() {
             </SwiperSlide>
           ))}
         </Swiper>
+
+        <div className="flex justify-center mt-2">
+          <ViewAllButton to="/certificates">View All Certificates</ViewAllButton>
+        </div>
       </div>
 
-      <AnimatePresence>
-        {selected && <CertModal cert={selected} onClose={() => setSelected(null)} />}
-      </AnimatePresence>
+      {selected && <CertModal cert={selected} onClose={() => setSelected(null)} />}
     </SectionWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBriefcase, FiCode, FiExternalLink, FiBookOpen, FiCheckCircle, FiClock, FiAward, FiMapPin, FiGlobe } from 'react-icons/fi';
 import { SiCodeforces, SiLeetcode, SiCodechef, SiHackerrank } from 'react-icons/si';
@@ -252,6 +252,14 @@ function CPPlatformCard({ platform, index }) {
 
 export default function Experience() {
   const [activeTab, setActiveTab] = useState('work');
+
+  // Deep-link support: Navbar's Experience dropdown dispatches this event
+  // to jump straight to a specific tab (Training Program / Competitive Programming).
+  useEffect(() => {
+    const handler = (e) => setActiveTab(e.detail);
+    window.addEventListener('experience-tab', handler);
+    return () => window.removeEventListener('experience-tab', handler);
+  }, []);
 
   return (
     <SectionWrapper id="experience">

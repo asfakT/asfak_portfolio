@@ -1,17 +1,33 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu, FiX, FiChevronDown } from 'react-icons/fi';
 import Logo from '../ui/Logo';
 
 const navLinks = [
   { href: '#home', label: 'Home' },
   { href: '#about', label: 'About' },
-  { href: '#experience', label: 'Experience' },
+  {
+    href: '#experience',
+    label: 'Experience',
+    children: [
+      { href: '#experience', label: 'Work Experience', tab: 'work' },
+      { href: '#experience', label: 'Training Program', tab: 'training' },
+      { href: '#experience', label: 'Competitive Programming', tab: 'cp' },
+    ],
+  },
   { href: '#projects', label: 'Projects' },
   { href: '#skills', label: 'Skills' },
   { href: '#research', label: 'Research' },
-  { href: '#achievements', label: 'Achievements' },
-  { href: '#certificates', label: 'Certificates' },
+  {
+    href: '#achievements',
+    label: 'More',
+    children: [
+      { href: '#achievements', label: 'Achievements' },
+      { href: '#certificates', label: 'Certificates' },
+      { href: '#blog', label: 'Blog' },
+    ],
+  },
   { href: '#contact', label: 'Contact' },
 ];
 
@@ -19,9 +35,14 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [active, setActive] = useState('home');
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const sections = navLinks.map((l) => l.href.slice(1));
+    const sections = navLinks.flatMap((l) =>
+      l.children ? l.children.map((c) => c.href.slice(1)) : [l.href.slice(1)]
+    );
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
       let current = sections[0];
@@ -38,9 +59,21 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleNavClick = (href) => {
+  const handleNavClick = (href, tab) => {
     setMobileOpen(false);
-    const el = document.querySelector(href);
+    setOpenDropdown(null);
+    const id = href.slice(1);
+
+    // On another route: go home first, then let HomePage scroll to the section.
+    if (location.pathname !== '/') {
+      navigate('/', { state: { scrollTo: id, tab } });
+      return;
+    }
+
+    if (tab) {
+      window.dispatchEvent(new CustomEvent('experience-tab', { detail: tab }));
+    }
+    const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -82,32 +115,76 @@ export default function Navbar() {
             {/* ── Desktop nav links ── */}
             <div className="hidden lg:flex items-center gap-0.5">
               {navLinks.map((link) => {
-                const id = link.href.slice(1);
-                const isActive = active === id;
+                const hasChildren = !!link.children;
+                const isActive = hasChildren
+                  ? link.children.some((c) => c.href.slice(1) === active)
+                  : active === link.href.slice(1);
+
                 return (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                    className={`relative px-4 py-2.5 text-[15px] font-medium rounded-lg transition-all duration-200 ${
-                      isActive ? 'text-white' : 'text-gray-400 hover:text-white'
-                    }`}
+                  <div
+                    key={link.href + link.label}
+                    className="relative"
+                    onMouseEnter={() => hasChildren && setOpenDropdown(link.label)}
+                    onMouseLeave={() => hasChildren && setOpenDropdown(null)}
+                    onFocus={() => hasChildren && setOpenDropdown(link.label)}
+                    onBlur={(e) => {
+                      if (hasChildren && !e.currentTarget.contains(e.relatedTarget)) setOpenDropdown(null);
+                    }}
                   >
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-indicator"
-                        className="absolute inset-0 rounded-lg"
-                        style={{ background: 'rgba(255,255,255,0.07)' }}
-                      />
+                    <a
+                      href={link.href}
+                      onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
+                      className={`relative flex items-center gap-1 px-4 py-2.5 text-[15px] font-medium rounded-lg transition-all duration-200 ${
+                        isActive ? 'text-white' : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-indicator"
+                          className="absolute inset-0 rounded-lg"
+                          style={{ background: 'rgba(255,255,255,0.07)' }}
+                        />
+                      )}
+                      <span className="relative z-10">{link.label}</span>
+                      {hasChildren && <FiChevronDown size={14} className="relative z-10" />}
+                      {isActive && (
+                        <span
+                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"
+                          style={{ boxShadow: '0 0 6px #3B82F6' }}
+                        />
+                      )}
+                    </a>
+
+                    {hasChildren && (
+                      <AnimatePresence>
+                        {openDropdown === link.label && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute top-full left-0 pt-2 min-w-[220px]"
+                          >
+                            <div
+                              className="rounded-xl border overflow-hidden shadow-2xl shadow-black/60"
+                              style={{ background: 'rgba(10,10,10,0.98)', borderColor: 'rgba(255,255,255,0.1)' }}
+                            >
+                              {link.children.map((child) => (
+                                <a
+                                  key={child.label}
+                                  href={child.href}
+                                  onClick={(e) => { e.preventDefault(); handleNavClick(child.href, child.tab); }}
+                                  className="block px-4 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                                >
+                                  {child.label}
+                                </a>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     )}
-                    <span className="relative z-10">{link.label}</span>
-                    {isActive && (
-                      <span
-                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"
-                        style={{ boxShadow: '0 0 6px #3B82F6' }}
-                      />
-                    )}
-                  </a>
+                  </div>
                 );
               })}
             </div>
@@ -155,22 +232,40 @@ export default function Navbar() {
           >
             <div className="px-5 py-5 space-y-1">
               {navLinks.map((link) => {
-                const isActive = active === link.href.slice(1);
+                const isActive = link.children
+                  ? link.children.some((c) => c.href.slice(1) === active)
+                  : active === link.href.slice(1);
                 return (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium transition-colors ${
-                      isActive
-                        ? 'text-white'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                    style={isActive ? { background: 'rgba(59,130,246,0.12)', color: '#fff' } : {}}
-                  >
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
-                    {link.label}
-                  </a>
+                  <div key={link.href + link.label}>
+                    <a
+                      href={link.href}
+                      onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
+                      className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium transition-colors ${
+                        isActive
+                          ? 'text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                      style={isActive ? { background: 'rgba(59,130,246,0.12)', color: '#fff' } : {}}
+                    >
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
+                      {link.label}
+                    </a>
+
+                    {link.children && (
+                      <div className="ml-4 pl-3 border-l space-y-0.5 mb-1" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        {link.children.map((child) => (
+                          <a
+                            key={child.label}
+                            href={child.href}
+                            onClick={(e) => { e.preventDefault(); handleNavClick(child.href, child.tab); }}
+                            className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-white transition-colors"
+                          >
+                            {child.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               <div className="pt-3 pb-1">
