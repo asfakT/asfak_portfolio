@@ -7,7 +7,7 @@ export default function BlogCard({ post }) {
       href={post.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block h-full rounded-2xl border overflow-hidden flex flex-col transition-colors duration-300 hover:border-blue-500/40"
+      className="group block h-full rounded-xl border overflow-hidden flex flex-col transition-colors duration-300 hover:border-blue-500/40"
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       {/* Thumbnail */}
@@ -16,7 +16,7 @@ export default function BlogCard({ post }) {
           src={post.image}
           alt={post.title}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
         <div className="absolute top-3 left-3">
@@ -26,7 +26,7 @@ export default function BlogCard({ post }) {
 
       {/* Body */}
       <div className="p-5 flex flex-col gap-3 flex-1">
-        <div className="flex items-center gap-3 text-xs font-mono text-gray-500">
+        <div className="flex items-center gap-3 text-xs text-gray-500">
           <span>{post.date}</span>
           <span className="flex items-center gap-1">
             <FiClock size={12} />
@@ -42,7 +42,7 @@ export default function BlogCard({ post }) {
           style={{ borderColor: 'rgba(59,130,246,0.18)' }}
         >
           <span>Read on Medium</span>
-          <FiArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          <FiArrowUpRight size={15} />
         </div>
       </div>
     </a>

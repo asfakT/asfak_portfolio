@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import {
-  FiMail, FiGithub, FiLinkedin, FiArrowRight,
+  FiMail, FiGithub, FiLinkedin,
   FiArrowUpCircle, FiMapPin, FiSend, FiPhone,
   FiBookOpen, FiBriefcase, FiActivity,
 } from 'react-icons/fi';
@@ -75,24 +75,20 @@ export default function Contact() {
 
       {/* ── Email CTA banner ── */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="relative overflow-hidden rounded-3xl p-8 md:p-10 mb-14 flex flex-col md:flex-row items-center justify-between gap-6"
+        className="relative overflow-hidden rounded-xl p-8 md:p-10 mb-14 flex flex-col md:flex-row items-center justify-between gap-6"
         style={{
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)',
-          border: '1px solid rgba(59,130,246,0.25)',
-          boxShadow: '0 0 60px rgba(59,130,246,0.1)',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.1)',
         }}
       >
-        {/* Glow blob */}
-        <div className="absolute -top-10 -left-10 w-48 h-48 bg-blue-500/[0.06] rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-500/[0.04] rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
             <span className="text-green-400 text-sm font-medium">Available for opportunities</span>
           </div>
           <h3 className="text-white text-2xl md:text-3xl font-extrabold mb-1">
@@ -106,17 +102,12 @@ export default function Contact() {
 
         <motion.a
           href="mailto:shahrierasfak27@gmail.com"
-          whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
-          className="relative z-10 flex items-center gap-3 px-7 py-4 rounded-2xl font-bold text-white text-base flex-shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, #10B981, #059669)',
-            boxShadow: '0 0 18px rgba(16,185,129,0.5), 0 0 6px rgba(16,185,129,0.35)',
-          }}
+          className="relative z-10 flex items-center gap-3 px-7 py-4 rounded-lg font-bold text-white text-base flex-shrink-0 transition-colors hover:brightness-110"
+          style={{ background: '#2563EB' }}
         >
           <FiSend size={18} />
           Send Email
-          <FiArrowRight size={16} />
         </motion.a>
       </motion.div>
 
@@ -125,8 +116,8 @@ export default function Contact() {
 
         {/* Left — open to */}
         <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="space-y-4"
@@ -141,16 +132,14 @@ export default function Contact() {
             return (
             <motion.div
               key={item.title}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="flex gap-4 p-5 rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
+              className="flex gap-4 p-5 rounded-xl border transition-all duration-300 hover:border-white/20"
               style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
             >
-              <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/25 flex-shrink-0 mt-0.5 self-start">
-                <Icon size={18} className="text-blue-400" />
-              </div>
+              <Icon size={18} className="text-gray-400 flex-shrink-0 mt-1" />
               <div>
                 <p className="text-white font-bold text-base mb-1">{item.title}</p>
                 <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
@@ -162,8 +151,8 @@ export default function Contact() {
 
         {/* Right — social grid */}
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="grid grid-cols-1 sm:grid-cols-2 gap-3"
@@ -174,39 +163,18 @@ export default function Contact() {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.35, delay: i * 0.07 }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              className="flex items-center gap-3.5 p-4 rounded-2xl border transition-all duration-300 group"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.09)' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = accent + '55';
-                e.currentTarget.style.background = accent + '12';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)';
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              }}
+              transition={{ duration: 0.35, delay: i * 0.05 }}
+              className="flex items-center gap-3.5 p-4 rounded-xl border border-white/[0.09] bg-white/[0.02] transition-colors duration-200 hover:border-white/20"
             >
-              {/* Icon box */}
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: accent + '20', border: `1.5px solid ${accent}40` }}
-              >
-                <Icon size={20} style={{ color: accent }} />
-              </div>
+              <Icon size={20} className="flex-shrink-0" style={{ color: accent }} />
 
               <div className="min-w-0 flex-1">
                 <p className="text-white font-bold text-sm">{label}</p>
                 <p className="text-gray-400 text-xs font-mono truncate">{handle}</p>
               </div>
-
-              <FiArrowRight
-                size={15}
-                className="text-gray-600 group-hover:text-gray-300 flex-shrink-0 transition-all duration-200 group-hover:translate-x-1"
-              />
             </motion.a>
           ))}
         </motion.div>
@@ -214,8 +182,8 @@ export default function Contact() {
 
       {/* ── Footer ── */}
       <motion.footer
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
         className="pt-10 border-t"
@@ -227,11 +195,7 @@ export default function Contact() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm text-white"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  boxShadow: '0 0 16px rgba(59,130,246,0.4)',
-                }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center font-extrabold text-sm text-white border border-white/15"
               >
                 AS
               </div>
@@ -317,13 +281,12 @@ export default function Contact() {
           className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t"
           style={{ borderColor: 'rgba(255,255,255,0.06)' }}
         >
-          <p className="text-gray-500 text-xs font-mono">
+          <p className="text-gray-400 text-xs">
             © {new Date().getFullYear()} Asfak Shahrier · Built with React, Tailwind &amp; Framer Motion
           </p>
 
           <motion.button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            whileHover={{ y: -3, scale: 1.05 }}
             className="flex items-center gap-2 text-gray-400 hover:text-blue-400 text-sm font-semibold transition-colors duration-200"
           >
             Back to top

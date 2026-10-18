@@ -100,10 +100,7 @@ export default function Navbar() {
               onClick={(e) => { e.preventDefault(); handleNavClick('#home'); }}
               className="flex items-center gap-3 group flex-shrink-0"
             >
-              <span
-                className="transition-transform duration-300 group-hover:scale-105"
-                style={{ filter: 'drop-shadow(0 0 14px rgba(59,130,246,0.45))' }}
-              >
+              <span>
                 <Logo size={44} />
               </span>
               <span className="hidden sm:block text-sm font-semibold uppercase tracking-[0.2em]">
@@ -149,8 +146,7 @@ export default function Navbar() {
                       {hasChildren && <FiChevronDown size={14} className="relative z-10" />}
                       {isActive && (
                         <span
-                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"
-                          style={{ boxShadow: '0 0 6px #3B82F6' }}
+                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500"
                         />
                       )}
                     </a>
@@ -193,11 +189,7 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
 <a
                 href="mailto:shahrierasfak27@gmail.com"
-                className="hidden md:inline-flex items-center px-5 py-2.5 text-[15px] font-semibold text-white rounded-xl transition-all duration-200 hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
-                  boxShadow: '0 0 18px rgba(16,185,129,0.5), 0 0 6px rgba(16,185,129,0.35)',
-                }}
+                className="hidden md:inline-flex items-center px-5 py-2.5 text-[15px] font-semibold text-white rounded-lg border border-white/15 transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.04]"
               >
                 Hire Me
               </a>
@@ -271,8 +263,7 @@ export default function Navbar() {
               <div className="pt-3 pb-1">
                 <a
                   href="mailto:shahrierasfak27@gmail.com"
-                  className="block w-full text-center px-5 py-3.5 text-base font-semibold text-white rounded-xl transition-colors"
-                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}
+                  className="block w-full text-center px-5 py-3.5 text-base font-semibold text-white rounded-lg border border-white/15 transition-colors"
                 >
                   Hire Me
                 </a>

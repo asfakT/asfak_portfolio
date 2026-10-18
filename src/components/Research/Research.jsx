@@ -25,7 +25,7 @@ function PaperCard({ paper, index }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.55, delay: index * 0.15 }}
-      className="overflow-hidden rounded-2xl border transition-all duration-300 hover:border-blue-500/30"
+      className="overflow-hidden rounded-xl border transition-all duration-300 hover:border-white/20"
       style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
     >
       {/* Header — real paper image if provided, else gradient */}
@@ -53,7 +53,7 @@ function PaperCard({ paper, index }) {
         </div>
         {/* Year */}
         <div className="absolute bottom-3 left-5">
-          <p className="text-white/80 text-xs font-mono">{paper.year}</p>
+          <p className="text-white/80 text-xs">{paper.year}</p>
         </div>
       </div>
 
@@ -161,14 +161,11 @@ export default function Research() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="p-6 rounded-2xl border"
-        style={{
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.07) 0%, transparent 50%, rgba(16,185,129,0.07) 100%)',
-          borderColor: 'rgba(255,255,255,0.08)',
-        }}
+        className="p-6 rounded-xl border"
+        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}
       >
         <h3 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-          <span className="text-blue-400">⦿</span> Research Interests
+          Research Interests
         </h3>
         <div className="flex flex-wrap gap-2">
           {researchInterests.map((interest) => (

@@ -26,12 +26,12 @@ export function FeaturedProjectCard({ project, index }) {
       className={`grid lg:grid-cols-2 gap-6 lg:gap-10 items-center ${!isEven ? 'lg:direction-rtl' : ''}`}
     >
       {/* Image */}
-      <div className={`relative group overflow-hidden rounded-2xl border border-border ${!isEven ? 'lg:order-2' : ''}`}>
+      <div className={`relative group overflow-hidden rounded-xl border border-border ${!isEven ? 'lg:order-2' : ''}`}>
         <div className="aspect-video overflow-hidden">
           <img
             src={project.image}
             alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         </div>
@@ -56,7 +56,7 @@ export function FeaturedProjectCard({ project, index }) {
       <div className={`space-y-4 ${!isEven ? 'lg:order-1' : ''}`}>
         <div className="flex items-center gap-2">
           <Badge color={project.color === 'blue' ? 'blue' : 'red'} size="md">{project.tag}</Badge>
-          <span className="text-gray-400 text-sm font-mono">Featured Project</span>
+          <span className="text-gray-400 text-sm">Featured Project</span>
         </div>
 
         <h3 className="text-white text-2xl md:text-3xl font-bold leading-tight">{project.title}</h3>
@@ -122,7 +122,7 @@ export function SmallProjectCard({ project }) {
           setOpen(true);
         }
       }}
-      className="h-full rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-blue-500/30 focus:border-blue-500/50 focus:outline-none group cursor-pointer"
+      className="h-full rounded-xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-white/20 focus:border-white/30 focus:outline-none group cursor-pointer"
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       {project.image && (
@@ -130,7 +130,7 @@ export function SmallProjectCard({ project }) {
           <img
             src={project.image}
             alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-700"
           />
         </div>
       )}

@@ -8,26 +8,12 @@ import {
   SiGooglegemini, SiJupyter,
 } from 'react-icons/si';
 import {
-  FiCode, FiZap, FiCpu, FiTool, FiBarChart2,
-  FiLayers, FiActivity, FiBox, FiServer,
-  FiStar, FiShield, FiDatabase, FiTerminal,
+  FiCode, FiCpu, FiBarChart2,
+  FiLayers, FiActivity, FiBox, FiServer, FiTerminal,
 } from 'react-icons/fi';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
 import { skillCategories } from '../../data/skills';
-import skillsBg from '../../assets/skills_bg.png';
-
-// ── Category icon map ─────────────────────────────────────────────────────────
-const catIconMap = { code: FiCode, zap: FiZap, cpu: FiCpu, tool: FiTool, aperture: FiActivity, shield: FiShield };
-
-// ── Category tag config ───────────────────────────────────────────────────────
-const categoryMeta = {
-  'Languages':              { tagIcon: FiStar,     tagColor: '#3B82F6' },
-  'Frameworks & Libraries': { tagIcon: FiCode,     tagColor: '#3B82F6' },
-  'Python Libraries':       { tagIcon: FiDatabase, tagColor: '#10B981' },
-  'CS & Tools':             { tagIcon: FiShield,   tagColor: '#10B981' },
-};
-
 // ── Per-skill icon + brand colors ─────────────────────────────────────────────
 const skillIconMap = {
   // Languages
@@ -73,130 +59,61 @@ const skillIconMap = {
 };
 
 // ── Single skill row ──────────────────────────────────────────────────────────
-function SkillRow({ name, index, accent = '#3B82F6' }) {
-  const ic = skillIconMap[name] || { icon: FiCode };
-  const Icon = ic.icon;
+function SkillRow({ name }) {
+  const Icon = (skillIconMap[name] || { icon: FiCode }).icon;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.35, delay: index * 0.05 }}
-      className="group flex items-center gap-3 py-0.5"
-    >
-      {/* Brand icon — tinted to the card accent */}
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-        style={{ background: accent + '18', border: `1px solid ${accent}2a` }}
-      >
-        <Icon size={16} style={{ color: accent }} />
-      </div>
-
-      {/* Name */}
+    <div className="flex items-center gap-3 py-0.5">
+      <Icon size={16} className="text-gray-400 flex-shrink-0" />
       <span className="text-gray-200 text-sm font-medium">{name}</span>
-    </motion.div>
+    </div>
   );
 }
 
 // ── Category card ─────────────────────────────────────────────────────────────
 function CategoryCard({ category, index }) {
-  const CatIcon = catIconMap[category.icon] || FiCode;
-  const meta = categoryMeta[category.category] || { tagIcon: FiCode, tagColor: '#3B82F6' };
-  const TagIcon = meta.tagIcon;
-  const { color } = category;
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background: 'rgba(10,11,18,0.85)',
-        border: `1px solid ${color}28`,
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.03), 0 8px 32px rgba(0,0,0,0.45)`,
-      }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className="rounded-xl border p-5"
+      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
-      {/* Top color stripe */}
-      <div
-        className="h-px"
-        style={{ background: `linear-gradient(90deg, ${color}, ${color}55, transparent 70%)` }}
-      />
-
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center"
-              style={{ background: color + '1a', border: `1px solid ${color}30` }}
-            >
-              <CatIcon size={20} style={{ color }} />
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-sm leading-tight">{category.category}</h3>
-              <p className="text-[11px] font-mono mt-0.5" style={{ color: color + 'BB' }}>
-                {category.skills.length} skills
-              </p>
-            </div>
-          </div>
-
-          {/* Tag */}
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wider"
-            style={{
-              background: meta.tagColor + '14',
-              color: meta.tagColor,
-              border: `1px solid ${meta.tagColor}28`,
-            }}
-          >
-            <TagIcon size={11} />
-            {category.tag}
-          </div>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h3 className="text-white font-bold text-sm leading-tight">{category.category}</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {category.skills.length} skills
+          </p>
         </div>
 
-        {/* Skill grid — strongest first, 2 columns on sm+ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5">
-          {[...category.skills]
-            .sort((a, b) => b.level - a.level)
-            .map((skill, i) => (
-              <SkillRow key={skill.name} name={skill.name} index={i} accent={color} />
-            ))}
-        </div>
+        {/* Tag */}
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wider text-gray-300 border border-white/10">
+          {category.tag}
+        </span>
+      </div>
+
+      {/* Skill grid — strongest first, 2 columns on sm+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5">
+        {[...category.skills]
+          .sort((a, b) => b.level - a.level)
+          .map((skill) => (
+            <SkillRow key={skill.name} name={skill.name} />
+          ))}
       </div>
     </motion.div>
   );
 }
 
 // ── Loved tech row ────────────────────────────────────────────────────────────
-const lovedTech = [
-  { icon: SiReact,      color: '#3B82F6' },
-  { icon: SiLaravel,    color: '#10B981' },
-  { icon: SiPython,     color: '#3B82F6' },
-  { icon: SiMysql,      color: '#10B981' },
-  { icon: SiGit,        color: '#3B82F6' },
-  { icon: SiDocker,     color: '#10B981' },
-  { icon: SiFigma,      color: '#3B82F6' },
-];
+const lovedTech = [SiReact, SiLaravel, SiPython, SiMysql, SiGit, SiDocker, SiFigma];
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function Skills() {
   return (
-    <div className="relative overflow-hidden">
-      {/* Background globe image — top right, fades out */}
-      <img
-        src={skillsBg}
-        alt=""
-        aria-hidden="true"
-        className="absolute top-0 right-0 w-[60%] pointer-events-none select-none"
-        style={{
-          opacity: 0.85,
-          maskImage: 'radial-gradient(ellipse 95% 90% at 100% 0%, black 40%, rgba(0,0,0,0.7) 65%, transparent 88%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 95% 90% at 100% 0%, black 40%, rgba(0,0,0,0.7) 65%, transparent 88%)',
-        }}
-      />
     <SectionWrapper id="skills">
       <SectionTitle
         label="/ skills"
@@ -212,11 +129,11 @@ export default function Skills() {
 
       {/* Bottom bar: legend + loved tech */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="flex flex-wrap items-center justify-center gap-4 px-5 py-3.5 rounded-2xl"
+        className="flex flex-wrap items-center justify-center gap-4 px-5 py-3.5 rounded-xl"
         style={{
           background: 'rgba(255,255,255,0.025)',
           border: '1px solid rgba(255,255,255,0.07)',
@@ -224,28 +141,14 @@ export default function Skills() {
       >
         {/* Loved tech icons */}
         <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-mono text-gray-500">I love working with</span>
+          <span className="text-xs text-gray-400">I love working with</span>
           <div className="flex items-center gap-1.5">
-            {lovedTech.map((t, i) => {
-              const Icon = t.icon;
-              return (
-                <motion.div
-                  key={i}
-                  whileHover={{ scale: 1.25, y: -3 }}
-                  className="w-8 h-8 rounded-full flex items-center justify-center cursor-default"
-                  style={{
-                    background: t.color + '14',
-                    border: `1px solid ${t.color}28`,
-                  }}
-                >
-                  <Icon size={15} style={{ color: t.color }} />
-                </motion.div>
-              );
-            })}
+            {lovedTech.map((Icon, i) => (
+              <Icon key={i} size={16} className="text-gray-400 mx-1" />
+            ))}
           </div>
         </div>
       </motion.div>
     </SectionWrapper>
-    </div>
   );
 }

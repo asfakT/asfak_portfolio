@@ -39,7 +39,7 @@ function WorkCard({ exp, index }) {
 
         <div className="flex-1 pb-8">
           <div
-            className="p-6 rounded-2xl border transition-all duration-300 group-hover:border-blue-500/25"
+            className="p-6 rounded-xl border transition-all duration-300 group-hover:border-blue-500/25"
             style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
           >
             {/* Header */}
@@ -92,19 +92,10 @@ function TrainingCard({ item, index }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.12 }}
-      className="relative overflow-hidden rounded-2xl border transition-all duration-300 group"
-      style={{
-        background: `linear-gradient(135deg, ${accent}0d 0%, transparent 60%)`,
-        borderColor: `${accent}33`,
-      }}
+      className="relative overflow-hidden rounded-xl border transition-all duration-300 group"
+      style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
     >
-      {/* Left accent bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-        style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}88)` }}
-      />
-
-      <div className="p-6 pl-7">
+      <div className="p-6">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
@@ -156,8 +147,7 @@ function TrainingCard({ item, index }) {
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:scale-105 flex-shrink-0"
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 0 16px ${accent}40` }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white border border-white/15 transition-colors duration-200 hover:border-white/30 flex-shrink-0"
             >
               View Certificate <FiExternalLink size={13} />
             </a>
@@ -180,7 +170,7 @@ function CPPlatformCard({ platform, index }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="flex flex-col p-6 rounded-2xl border transition-all duration-300 group hover:border-white/20"
+      className="flex flex-col p-6 rounded-xl border transition-all duration-300 group hover:border-white/20"
       style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
     >
       {/* Header: logo + name + view-profile link */}
@@ -344,7 +334,7 @@ export default function Experience() {
                 const accent = isBlue ? 'text-blue-400' : 'text-emerald-400';
                 const Icon = s.icon;
                 return (
-                  <div key={s.label} className={`p-5 rounded-2xl border text-center ${box}`}>
+                  <div key={s.label} className={`p-5 rounded-xl border text-center ${box}`}>
                     <Icon className={`mx-auto mb-2 ${accent}`} size={20} />
                     <p className={`text-3xl font-extrabold ${accent}`}>{s.value}</p>
                     <p className="text-gray-300 text-sm font-medium mt-1.5">{s.label}</p>
@@ -361,7 +351,7 @@ export default function Experience() {
             </div>
 
             {/* Favorite topics */}
-            <div className="p-6 rounded-2xl border" style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="p-6 rounded-xl border" style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}>
               <p className="text-gray-200 text-base font-semibold mb-3">Favorite Problem Categories</p>
               <div className="flex flex-wrap gap-2">
                 {cpStats.favoriteTopics.map((t) => (

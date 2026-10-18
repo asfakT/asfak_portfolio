@@ -71,10 +71,9 @@ export const shadows = {
 // ── Button variant styles (used in Button.jsx) ────────────────────────────────
 export const buttonVariants = {
   primary: {
-    background: gradients.primaryBtn,
+    background: colors.primary.dark,
     color:      colors.text.primary,
     border:     'none',
-    boxShadow:  shadows.button,
   },
   secondary: {
     background: 'transparent',
@@ -82,10 +81,9 @@ export const buttonVariants = {
     border:     `1px solid ${colors.border.hover}`,
   },
   red: {
-    background: gradients.secondary,
+    background: colors.secondary.base,
     color:      colors.text.primary,
     border:     'none',
-    boxShadow:  shadows.buttonRed,
   },
   ghost: {
     background: 'transparent',

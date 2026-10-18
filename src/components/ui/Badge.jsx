@@ -15,7 +15,7 @@ export default function Badge({ children, color = 'blue', size = 'sm' }) {
   };
 
   return (
-    <span className={`inline-block font-mono font-medium border rounded-md ${colors[color]} ${sizes[size]}`}>
+    <span className={`inline-block font-medium border rounded-md ${colors[color]} ${sizes[size]}`}>
       {children}
     </span>
   );

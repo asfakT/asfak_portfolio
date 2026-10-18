@@ -1,39 +1,19 @@
 import { motion } from 'framer-motion';
-import { FiAward, FiFileText, FiBookOpen } from 'react-icons/fi';
 import SectionWrapper from '../ui/SectionWrapper';
 import SectionTitle from '../ui/SectionTitle';
 import Badge from '../ui/Badge';
 import { achievements, contestHistory, contestGallery } from '../../data/achievements';
 
-const colorMap = {
-  blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-  red: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-  yellow: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-  green: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-};
-
-const categoryIcon = {
-  'Competitive Programming': FiAward,
-  'Research': FiFileText,
-  'Certification': FiBookOpen,
-  'Training Program': FiBookOpen,
-};
-
 function AchievementCard({ achievement, index }) {
-  const Icon = categoryIcon[achievement.category] || FiAward;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 25 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ y: -5 }}
-      className="p-5 rounded-2xl bg-card border border-border hover:border-border-light transition-all duration-300"
+      className="p-5 rounded-xl bg-card border border-border hover:border-border-light transition-all duration-300"
     >
       <div className="flex items-start gap-4">
-        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${colorMap[achievement.color]}`}>
-          <Icon size={20} />
-        </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <h3 className="text-white font-semibold text-sm">{achievement.title}</h3>
@@ -71,11 +51,11 @@ export default function Achievements() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="rounded-2xl border border-border overflow-hidden"
+        className="rounded-xl border border-border overflow-hidden"
       >
         <div className="px-6 py-4 bg-white/[0.03] border-b border-border flex items-center justify-between">
           <h3 className="text-white font-semibold text-sm">Onsite Contest Results</h3>
-          <span className="text-gray-500 text-xs font-mono">2021 — 2023</span>
+          <span className="text-gray-500 text-xs">2021 — 2023</span>
         </div>
         <div className="divide-y divide-border">
           {contestHistory.map((contest, i) => {
@@ -130,7 +110,7 @@ export default function Achievements() {
               <img
                 src={g.src}
                 alt={g.caption}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-300"
               />
               <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex items-end p-3">
                 <span className="text-white text-xs sm:text-sm font-semibold leading-snug text-left drop-shadow">{g.caption}</span>

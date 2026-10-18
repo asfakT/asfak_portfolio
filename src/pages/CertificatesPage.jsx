@@ -24,7 +24,7 @@ export default function CertificatesPage() {
   return (
     <div
       className="min-h-screen"
-      style={{ background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 100%)' }}
+      style={{ background: 'var(--bg-base)' }}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 pt-28 pb-24">
         <Link

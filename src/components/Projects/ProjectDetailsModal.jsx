@@ -24,7 +24,7 @@ export default function ProjectDetailsModal({ project, onClose }) {
         initial={{ opacity: 0, scale: 0.9, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-        className="relative w-full max-w-3xl rounded-2xl overflow-hidden border flex flex-col"
+        className="relative w-full max-w-3xl rounded-xl overflow-hidden border flex flex-col"
         style={{ background: '#0d0d0d', borderColor: `${accent}44`, maxHeight: '92vh' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -166,7 +166,7 @@ export default function ProjectDetailsModal({ project, onClose }) {
                 href={project.live}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-transform hover:scale-105"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:brightness-110"
                 style={{ background: accent }}
               >
                 <FiExternalLink size={16} />

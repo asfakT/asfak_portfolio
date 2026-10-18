@@ -32,7 +32,7 @@ function BotAvatar() {
   return (
     <div
       className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white"
-      style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+      style={{ background: '#2563EB' }}
     >
       <FaRobot size={15} />
     </div>
@@ -149,11 +149,10 @@ export default function ChatWidget() {
       {/* Floating toggle button */}
       <motion.button
         onClick={() => setOpen((o) => !o)}
-        whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         aria-label={open ? 'Close chat' : 'Open chat'}
         className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center text-white"
-        style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 8px 30px rgba(59,130,246,0.45)' }}
+        style={{ background: '#2563EB', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
       >
         <AnimatePresence mode="wait" initial={false}>
           {open ? (
@@ -176,7 +175,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-            className="fixed bottom-24 right-6 z-[60] w-[min(380px,calc(100vw-2rem))] rounded-2xl overflow-hidden flex flex-col border"
+            className="fixed bottom-24 right-6 z-[60] w-[min(380px,calc(100vw-2rem))] rounded-xl overflow-hidden flex flex-col border"
             style={{
               background: '#0d0e14',
               borderColor: 'rgba(255,255,255,0.1)',
@@ -194,7 +193,7 @@ export default function ChatWidget() {
                 <div className="min-w-0">
                   <p className="text-white font-bold text-sm leading-tight">Asfak's Assistant</p>
                   <p className="text-emerald-400 text-[11px] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online · AI powered
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Online · AI powered
                   </p>
                 </div>
               </div>
@@ -226,7 +225,7 @@ export default function ChatWidget() {
                   {m.role === 'bot' && <BotAvatar />}
                   <div
                     className={`max-w-[78%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                      m.role === 'user' ? 'text-white rounded-2xl rounded-br-md' : 'text-gray-200 rounded-2xl rounded-bl-md'
+                      m.role === 'user' ? 'text-white rounded-xl rounded-br-md' : 'text-gray-200 rounded-xl rounded-bl-md'
                     }`}
                     style={{
                       background: m.role === 'user' ? '#2563EB' : 'rgba(255,255,255,0.06)',
@@ -247,7 +246,7 @@ export default function ChatWidget() {
               {loading && (
                 <div className="flex items-end gap-2 justify-start">
                   <BotAvatar />
-                  <div className="px-3.5 py-3 rounded-2xl rounded-bl-md flex gap-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="px-3.5 py-3 rounded-xl rounded-bl-md flex gap-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     {[0, 1, 2].map((d) => (
                       <motion.span key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }} />
                     ))}
@@ -274,7 +273,7 @@ export default function ChatWidget() {
             {/* Input */}
             <div className="p-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
               <div
-                className="flex items-end gap-2 rounded-2xl px-3 py-2"
+                className="flex items-end gap-2 rounded-xl px-3 py-2"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
               >
                 <textarea
@@ -304,7 +303,7 @@ export default function ChatWidget() {
                   disabled={!input.trim() || loading}
                   aria-label="Send"
                   className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0 transition-opacity disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+                  style={{ background: '#2563EB' }}
                 >
                   <FiSend size={15} />
                 </button>
