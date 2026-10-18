@@ -1,178 +1,139 @@
 import { motion } from 'framer-motion';
-import { FiFileText, FiExternalLink, FiCheckCircle, FiClock } from 'react-icons/fi';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
-import Badge from '../ui/Badge';
+import { reveal } from '../ui/reveal';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
 import { researchPapers, researchInterests } from '../../data/research';
 
-const colorHex = { blue: '#3B82F6', red: '#10B981' };
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
 
-// Status pill styling — In Press (accepted) is stronger than Under Review
-const statusStyle = {
-  'Published':    { cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', Icon: FiCheckCircle },
-  'In Press':     { cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', Icon: FiCheckCircle },
-  'Under Review': { cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30',          Icon: FiClock },
-};
-
-function PaperCard({ paper, index }) {
-  const c = colorHex[paper.color] || '#3B82F6';
-  const st = statusStyle[paper.status] || statusStyle['Under Review'];
-  const StatusIcon = st.Icon;
-
+// Published / In Press = filled copper dot; any other status = hollow sand dot
+function Status({ status }) {
+  const review = status !== 'Published' && status !== 'In Press';
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 25 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.55, delay: index * 0.15 }}
-      className="overflow-hidden rounded-xl border transition-all duration-300 hover:border-white/20"
-      style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
-    >
-      {/* Header — real paper image if provided, else gradient */}
-      <div className="relative h-60 overflow-hidden" style={{ borderBottom: `1px solid ${c}22` }}>
-        {paper.image ? (
-          <img src={paper.image} alt={paper.title} className="w-full h-full object-cover object-top" />
-        ) : (
-          <div
-            className="w-full h-full"
-            style={{
-              background: `linear-gradient(135deg, ${c}26 0%, rgba(10,11,18,0.4) 55%), radial-gradient(circle at 85% 25%, ${c}1f, transparent 55%)`,
-            }}
-          >
-            <FiFileText className="absolute -bottom-3 -left-2 opacity-[0.07]" size={96} style={{ color: c }} />
-          </div>
-        )}
-        {/* Readability overlay (darkens top/bottom over the white paper image) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/35 pointer-events-none" />
-        {/* Status pill */}
-        <div className="absolute top-4 right-4">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-sm ${st.cls}`}>
-            <StatusIcon size={12} />
-            {paper.status}
-          </div>
-        </div>
-        {/* Year */}
-        <div className="absolute bottom-3 left-5">
-          <p className="text-white/80 text-xs">{paper.year}</p>
+    <span className={`${mono} inline-flex items-center gap-2 ${review ? '!text-sand' : '!text-copper'}`}>
+      <span className={`h-[7px] w-[7px] rounded-full ${review ? 'border border-sand' : 'bg-copper'}`} />
+      {status}
+    </span>
+  );
+}
+
+function PaperRow({ paper }) {
+  return (
+    <motion.article {...reveal()} className="grid grid-cols-1 gap-[22px] border-b border-cream/10 py-12 lg:grid-cols-[200px_1fr_240px] lg:gap-[4vw]">
+      {/* Year + status */}
+      <div className="flex items-baseline gap-[18px] lg:block">
+        <p className="font-serif text-[56px] leading-none tracking-[-0.02em]">{paper.year}</p>
+        <div className="lg:mt-4">
+          <Status status={paper.status} />
         </div>
       </div>
 
-      <div className="p-6">
-        {/* Title + venue */}
-        <div className="flex items-start gap-3 mb-4">
-          <div className={`p-2.5 rounded-xl mt-0.5 flex-shrink-0 ${
-            paper.color === 'blue' ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-emerald-500/15 border border-emerald-500/25'
-          }`}>
-            <FiFileText size={17} className={paper.color === 'blue' ? 'text-blue-400' : 'text-emerald-400'} />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-base leading-snug mb-2">{paper.title}</h3>
-            <p className={`text-sm font-medium ${paper.color === 'blue' ? 'text-blue-400' : 'text-emerald-400'}`}>
-              {paper.venue}
-            </p>
-            {paper.supervisor && (
-              <p className="text-gray-500 text-xs mt-1">Supervised by {paper.supervisor}</p>
-            )}
-          </div>
-        </div>
+      {/* Details */}
+      <div>
+        <h3 className="font-serif text-[26px] leading-[1.12] tracking-[-0.015em] lg:text-[clamp(26px,2.3vw,38px)]">{paper.title}</h3>
+        {paper.venue && <p className="mt-2.5 font-serif text-xl italic text-sand">{paper.venue}</p>}
+        {paper.supervisor && <p className="mt-1 text-[13px] text-[#9E978E]">Supervised by {paper.supervisor}</p>}
+        <p className="mt-5 max-w-[70ch] text-[17px] leading-[1.7] text-cream">{paper.abstract}</p>
 
-        {/* Abstract */}
-        <div
-          className="p-4 rounded-xl mb-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <p className="text-gray-300 text-sm leading-relaxed">{paper.abstract}</p>
-        </div>
+        <p className={`${mono} mt-6`}>Key Findings</p>
+        <ul className="mt-2.5">
+          {paper.findings.map((f) => (
+            <li
+              key={f}
+              className="relative py-1.5 pl-6 text-[15px] leading-[1.6] text-cream-2 before:absolute before:left-0 before:top-[17px] before:h-px before:w-3 before:bg-copper before:content-['']"
+            >
+              {f}
+            </li>
+          ))}
+        </ul>
 
-        {/* Findings */}
-        <div className="mb-4">
-          <p className="text-gray-300 text-sm font-semibold mb-2.5">Key Findings</p>
-          <ul className="space-y-2">
-            {paper.findings.map((f) => (
-              <li key={f} className="text-gray-400 text-sm flex items-start gap-2.5">
-                <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${paper.color === 'blue' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
-                {f}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Keywords */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="mt-5 flex flex-wrap gap-2">
           {paper.keywords.map((k) => (
-            <Badge key={k} color={paper.color === 'blue' ? 'blue' : 'green'} size="sm">{k}</Badge>
+            <span key={k} className="rounded-full border border-cream/[0.16] px-[11px] py-[5px] text-[12.5px] text-cream-2">
+              {k}
+            </span>
           ))}
         </div>
-
-        {/* Tools + DOI */}
-        <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <div className="flex flex-wrap gap-1.5">
-            {paper.tools.slice(0, 4).map((t) => (
-              <Badge key={t} color="gray" size="sm">{t}</Badge>
-            ))}
-          </div>
-          <div className="flex items-center gap-4 flex-shrink-0">
-            {paper.pdf && (
-              <a
-                href={paper.pdf}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
-                style={{ color: c }}
-              >
-                <FiFileText size={14} /> Read Paper
-              </a>
-            )}
-            {paper.doi && (
-              <a
-                href={paper.doi}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors font-medium"
-              >
-                DOI <FiExternalLink size={13} />
-              </a>
-            )}
-          </div>
-        </div>
+        <p className="mt-3.5 font-mono text-xs text-stone">
+          {paper.tools.slice(0, 4).map((t, i) => (
+            <span key={t}>
+              {i > 0 && <span className="mx-[9px] text-[#9E978E]">/</span>}
+              {t}
+            </span>
+          ))}
+        </p>
+        {paper.doi && (
+          <a href={paper.doi} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block border-b border-cream/40 pb-[3px] text-sm transition-colors hover:text-peach">
+            DOI <span className="text-copper">↗</span>
+          </a>
+        )}
       </div>
-    </motion.div>
+
+      {/* First-page thumbnail + PDF */}
+      <div className="max-w-[260px] lg:max-w-none">
+        {paper.image && paper.pdf && (
+          <a
+            href={paper.pdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${paper.title} (PDF)`}
+            className="group block overflow-hidden rounded border border-cream/10 bg-white"
+          >
+            <img
+              src={paper.image}
+              alt=""
+              className="block aspect-[4/5] w-full object-cover object-top opacity-[.88] contrast-[1.05] grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+            />
+          </a>
+        )}
+        {paper.pdf && (
+          <a
+            href={paper.pdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex gap-1.5 border-b border-cream pb-[3px] text-sm transition-colors hover:text-peach"
+          >
+            Read Paper <span className="text-copper">↗</span>
+          </a>
+        )}
+      </div>
+    </motion.article>
   );
 }
 
 export default function Research() {
   return (
-    <SectionWrapper id="research">
-      <SectionTitle
-        label="/ research"
-        title="Academic Contributions"
+    <EditorialSection id="research">
+      <SectionHeader
+        number="06"
+        label="research"
+        title="Academic"
+        titleEm="Contributions"
         subtitle="Published and under-review research at the intersection of ML, NLP, and real-world applications."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-        {researchPapers.map((paper, i) => (
-          <PaperCard key={paper.id} paper={paper} index={i} />
+      <div className="mt-16 border-t border-cream/10">
+        {researchPapers.map((paper) => (
+          <PaperRow key={paper.id} paper={paper} />
         ))}
       </div>
 
-      {/* Research interests */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="p-6 rounded-xl border"
-        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}
-      >
-        <h3 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-          Research Interests
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {researchInterests.map((interest) => (
-            <Badge key={interest} color="blue" size="md">{interest}</Badge>
+      {/* Research interests — 3-column serif list */}
+      <div className="mt-20">
+        <p className={mono}>Research Interests</p>
+        <div className="mt-4 grid grid-cols-1 border-t border-cream/10 md:grid-cols-3">
+          {researchInterests.map((interest, i) => (
+            <span
+              key={interest}
+              className={`border-b border-cream/10 py-4 font-serif text-[22px] text-cream-2 ${
+                i % 3 ? 'md:border-l md:pl-6' : ''
+              }`}
+            >
+              {interest}
+            </span>
           ))}
         </div>
-      </motion.div>
-    </SectionWrapper>
+      </div>
+    </EditorialSection>
   );
 }

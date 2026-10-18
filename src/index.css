@@ -11,7 +11,7 @@
   --color-secondary-light: #4a7fc1;
   --color-accent:         #10B981;
 
-  --bg-base:    #0d0e14;
+  --bg-base:    #030303;
   --bg-surface: #10111a;
   --bg-dark:    #111318;
   --bg-darker:  #13141c;
@@ -27,7 +27,7 @@
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 72px;
+    scroll-padding-top: 96px;
   }
 
   body {
@@ -103,16 +103,6 @@
   }
 }
 
-/* Swiper custom styles */
-.swiper-pagination-bullet {
-  background: #3B82F6 !important;
-  opacity: 0.4 !important;
-}
-.swiper-pagination-bullet-active {
-  opacity: 1 !important;
-  width: 20px !important;
-  border-radius: 4px !important;
-}
 /* Subtle film grain overlay — adds hand-crafted depth */
 body::after {
   content: '';
@@ -139,9 +129,17 @@ body::after {
 .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
 .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
-/* Equal-height project + certificate + blog cards */
-.projects-swiper .swiper-slide,
-.cert-swiper .swiper-slide,
-.blog-swiper .swiper-slide {
-  height: auto;
+/* Hero portrait: fade the photo's edges into the page so text never sits on it.
+   Mobile fades only the bottom; desktop fades all four edges. */
+.hero-portrait-mask {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 8%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 8%, #000 60%, transparent 100%);
+}
+@media (min-width: 1024px) {
+  .hero-portrait-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%), linear-gradient(to top, transparent 0%, #000 24%), linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to left, transparent 0%, #000 14%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to right, transparent 0%, #000 42%), linear-gradient(to top, transparent 0%, #000 24%), linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to left, transparent 0%, #000 14%);
+    mask-composite: intersect;
+  }
 }

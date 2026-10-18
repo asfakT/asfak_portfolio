@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 
-export default function SectionWrapper({ id, children, className = '' }) {
+// Full-width section (5vw side padding) for the editorial redesign.
+// Sections move here from SectionWrapper one at a time.
+export default function EditorialSection({ id, children, className = '' }) {
   return (
     <motion.section
       id={id}
@@ -8,7 +10,7 @@ export default function SectionWrapper({ id, children, className = '' }) {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className={`py-20 md:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full ${className}`}
+      className={`w-full px-[5vw] py-20 font-dm text-cream lg:py-28 ${className}`}
     >
       {children}
     </motion.section>

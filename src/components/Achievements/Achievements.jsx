@@ -1,124 +1,81 @@
 import { motion } from 'framer-motion';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
-import Badge from '../ui/Badge';
+import { reveal } from '../ui/reveal';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
 import { achievements, contestHistory, contestGallery } from '../../data/achievements';
 
-function AchievementCard({ achievement, index }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="p-5 rounded-xl bg-card border border-border hover:border-border-light transition-all duration-300"
-    >
-      <div className="flex items-start gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <h3 className="text-white font-semibold text-sm">{achievement.title}</h3>
-            {achievement.year && (
-              <Badge color={achievement.color === 'blue' ? 'blue' : 'green'} size="xs">{achievement.year}</Badge>
-            )}
-          </div>
-          <p className="text-gray-400 text-xs leading-relaxed">{achievement.description}</p>
-          <p className="text-gray-500 text-xs mt-2 font-medium">{achievement.category}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
 
 export default function Achievements() {
   return (
-    <SectionWrapper id="achievements">
-      <SectionTitle
-        label="/ achievements"
-        title="Milestones & Recognition"
+    <EditorialSection id="achievements">
+      <SectionHeader
+        number="07"
+        label="achievements"
+        title="Milestones &"
+        titleEm="Recognition"
         subtitle="A track record of results in competitive programming, research, and engineering."
       />
 
-      {/* Achievement cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+      {/* Achievements — 2-column hairline grid */}
+      <div className="mt-16 grid grid-cols-1 border-l border-t border-cream/10 md:grid-cols-2">
         {achievements.map((a, i) => (
-          <AchievementCard key={a.id} achievement={a} index={i} />
+          <motion.article key={a.id} {...reveal(i % 2)} className="border-b border-r border-cream/10 px-6 pb-7 pt-6 lg:px-7">
+            <div className="flex justify-between gap-3">
+              <span className={`${mono} !text-sand`}>{a.category}</span>
+              {a.year && <span className={`${mono} !text-copper`}>{a.year}</span>}
+            </div>
+            <h3 className="mt-3.5 font-serif text-[22px] leading-[1.15] tracking-[-0.01em] lg:text-[clamp(22px,1.9vw,30px)]">
+              {a.title}
+            </h3>
+            <p className="mt-2.5 text-[15px] leading-[1.65] text-cream-2">{a.description}</p>
+          </motion.article>
         ))}
       </div>
 
-      {/* Contest results table — verified placements only */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="rounded-xl border border-border overflow-hidden"
-      >
-        <div className="px-6 py-4 bg-white/[0.03] border-b border-border flex items-center justify-between">
-          <h3 className="text-white font-semibold text-sm">Onsite Contest Results</h3>
-          <span className="text-gray-500 text-xs">2021 — 2023</span>
+      {/* Onsite contest results — verified placements only */}
+      <div className="mt-20">
+        <div className="flex items-baseline justify-between gap-4">
+          <h3 className={mono}>Onsite Contest Results</h3>
+          <span className={mono}>2021 — 2023</span>
         </div>
-        <div className="divide-y divide-border">
-          {contestHistory.map((contest, i) => {
-            const isTop = contest.placement.includes('#1');
-            return (
-              <motion.div
-                key={contest.name}
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="px-6 py-4 hover:bg-white/[0.02] transition-colors flex flex-wrap items-center justify-between gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-gray-300 text-sm font-medium truncate">{contest.name}</p>
-                  {contest.year && <p className="text-gray-500 text-xs mt-0.5">{contest.year}</p>}
-                </div>
-                <span
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold border whitespace-nowrap ${
-                    isTop
-                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                      : 'bg-blue-500/15 text-blue-300 border-blue-500/25'
-                  }`}
-                >
-                  {contest.placement}
-                </span>
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Contest photo gallery — real proof, click to enlarge */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-        className="mt-8"
-      >
-        <p className="text-gray-300 text-sm font-semibold mb-3">Contest Highlights</p>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-          {contestGallery.map((g, i) => (
-            <motion.div
-              key={g.src}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="group relative aspect-square rounded-xl overflow-hidden border border-border"
+        <div className="mt-4 border-t border-cream/10">
+          {contestHistory.map((contest) => (
+            <div
+              key={contest.name}
+              className="grid grid-cols-[1fr_auto] items-baseline gap-x-5 gap-y-1.5 border-b border-cream/10 py-[18px] md:grid-cols-[1fr_90px_260px]"
             >
+              <p className="text-[17px] text-cream">{contest.name}</p>
+              <p className={`${mono} !text-[#9E978E]`}>{contest.year}</p>
+              <p
+                className={`${mono} col-span-2 md:col-span-1 md:text-right ${
+                  contest.placement.includes('#1') ? '!text-copper' : '!text-sand'
+                }`}
+              >
+                {contest.placement}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Contest photos — small, last; caption under each photo */}
+      <div className="mt-20">
+        <p className={mono}>Contest Highlights</p>
+        <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-6">
+          {contestGallery.map((g) => (
+            <figure key={g.src}>
               <img
                 src={g.src}
                 alt={g.caption}
-                className="w-full h-full object-cover transition-transform duration-300"
+                loading="lazy"
+                className="block aspect-[4/3] w-full rounded-md border border-cream/10 object-cover saturate-[.9]"
               />
-              <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex items-end p-3">
-                <span className="text-white text-xs sm:text-sm font-semibold leading-snug text-left drop-shadow">{g.caption}</span>
-              </div>
-            </motion.div>
+              <figcaption className="mt-2 text-xs leading-[1.4] text-cream-2">{g.caption}</figcaption>
+            </figure>
           ))}
         </div>
-      </motion.div>
-    </SectionWrapper>
+      </div>
+    </EditorialSection>
   );
 }

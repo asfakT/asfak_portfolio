@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
-import { FiGithub, FiLinkedin, FiArrowRight, FiDownload } from 'react-icons/fi';
-import { FaMedium } from 'react-icons/fa';
-import heroImg from '../../assets/hero_image1.jpeg';
-import Button from '../ui/Button';
+import { FiArrowDown, FiArrowUpRight } from 'react-icons/fi';
+import heroImg from '../../assets/hero_portrait.webp';
+import HeroStats from './HeroStats';
 
 const roles = [
   'Software Engineer',
@@ -12,139 +11,130 @@ const roles = [
   'AI & Machine Learning Enthusiast',
 ];
 
-const stats = [
-  { value: '3200+', label: 'Problems Solved' },
-  { value: '2+', label: 'Years Experience' },
-  { value: '2', label: 'Research Papers' },
+const socials = [
+  { label: 'GitHub', href: 'https://github.com/asfakT' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/asfak-shahrier/' },
+  { label: 'Medium', href: 'https://medium.com/@shahrierasfak27' },
 ];
 
-const containerVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
+const EMAIL = 'shahrierasfak27@gmail.com';
 
-const itemVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-};
+// Small uppercase mono label used for meta text
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
+const textLink = 'inline-flex items-center gap-1 transition-colors hover:text-peach hover:underline underline-offset-4';
 
-const socialClass =
-  'p-3 rounded-lg border border-white/10 text-gray-300 hover:text-white hover:border-white/25 transition-colors duration-200';
+const fade = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+};
 
 export default function Hero() {
   return (
-    <section
-      id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ background: '#0d0e14' }}
-    >
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-28 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-start">
-
-          {/* ── LEFT: text content ── */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="space-y-7"
-          >
-            {/* Status */}
-            <motion.p variants={itemVariants} className="inline-flex items-center gap-2 text-green-400 text-sm font-medium">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-              Open to Opportunities
-            </motion.p>
-
-            {/* Name */}
-            <motion.div variants={itemVariants}>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl font-bold leading-none tracking-tight text-white">
-                Asfak Shahrier
-              </h1>
-            </motion.div>
-
-            {/* Roles */}
-            <motion.p variants={itemVariants} className="text-lg sm:text-xl font-medium text-gray-200 leading-relaxed">
-              {roles.map((role, i) => (
-                <span key={role}>
-                  {i > 0 && <span className="text-gray-500 mx-2">·</span>}
-                  {role}
-                </span>
-              ))}
-            </motion.p>
-
-            {/* Tagline */}
-            <motion.p
-              variants={itemVariants}
-              className="text-gray-300 text-lg md:text-xl leading-relaxed max-w-lg"
-            >
-              Building production web apps with <span className="text-blue-400 font-semibold">Laravel, Angular & React</span>,
-              backed by strong <span className="text-white font-bold">competitive programming</span> fundamentals
-              and hands-on <span className="text-blue-400 font-semibold">AI integration</span>.
-            </motion.p>
-
-            {/* CTAs */}
-            <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
-              <Button href="#projects" variant="primary" className="text-base px-7 py-3.5">
-                View Projects <FiArrowRight />
-              </Button>
-              <Button href="#contact" variant="secondary" className="text-base px-7 py-3.5">
-                Get In Touch
-              </Button>
-              <Button href="/resume.pdf" variant="ghost" target="_blank" rel="noopener noreferrer" className="text-base">
-                <FiDownload /> Resume
-              </Button>
-            </motion.div>
-
-            {/* Social row */}
-            <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4 pt-1">
-              <a href="https://github.com/asfakT" target="_blank" rel="noopener noreferrer" className={socialClass} aria-label="GitHub">
-                <FiGithub size={20} />
-              </a>
-              <a href="https://www.linkedin.com/in/asfak-shahrier/" target="_blank" rel="noopener noreferrer" className={socialClass} aria-label="LinkedIn">
-                <FiLinkedin size={20} />
-              </a>
-              <a href="https://medium.com/@shahrierasfak27" target="_blank" rel="noopener noreferrer" className={socialClass} aria-label="Medium">
-                <FaMedium size={20} />
-              </a>
-              <span className="h-px w-10 bg-white/10" />
-              <span className="text-gray-400 text-sm">shahrierasfak27@gmail.com</span>
-            </motion.div>
-          </motion.div>
-
-          {/* ── RIGHT: photo ── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-            className="relative flex items-start justify-center"
-          >
-            <img
-              src={heroImg}
-              alt="Asfak Shahrier"
-              className="relative w-full max-w-[520px] object-cover object-top select-none"
-              style={{
-                maskImage: 'radial-gradient(ellipse 80% 75% at 50% 28%, black 20%, transparent 85%)',
-                WebkitMaskImage: 'radial-gradient(ellipse 80% 75% at 50% 28%, black 20%, transparent 85%)',
-              }}
-              draggable={false}
-            />
-          </motion.div>
-        </div>
-
-        {/* Stats line */}
+    <>
+      <section id="home" className="relative overflow-hidden bg-ink font-dm text-cream lg:min-h-screen">
+        {/* ── Portrait: stacked on mobile, right side on desktop ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="mt-16 sm:mt-20 pt-6 border-t border-white/[0.08] flex flex-wrap gap-x-10 gap-y-3"
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="relative mt-[96px] h-[52vh] w-full lg:mt-0 lg:absolute lg:right-[8vw] lg:top-1/2 lg:h-auto lg:w-[clamp(620px,58vw,1180px)] lg:-translate-y-[46%] lg:aspect-[1672/941]"
         >
-          {stats.map((stat) => (
-            <p key={stat.label} className="text-gray-400 text-sm sm:text-base">
-              <span className="text-white text-xl sm:text-2xl font-bold mr-2">{stat.value}</span>
-              {stat.label}
-            </p>
-          ))}
+          <img
+            src={heroImg}
+            alt="Asfak Shahrier"
+            className="hero-portrait-mask h-full w-full select-none object-cover object-[78%_center] brightness-[.82] saturate-[.92] lg:object-center"
+            draggable={false}
+          />
+          {/* Soft vignette so the photo sinks into the page */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 hidden lg:block"
+            style={{ background: 'radial-gradient(ellipse 70% 75% at 70% 42%, transparent 45%, rgba(3,3,3,0.55) 100%)' }}
+          />
         </motion.div>
-      </div>
-    </section>
+
+        {/* ── Top meta ── */}
+        <div className="relative z-10 -mt-6 flex flex-col gap-2 px-[5vw] lg:absolute lg:inset-x-[5vw] lg:top-[112px] lg:mt-0 lg:flex-row lg:justify-between lg:px-0">
+          <p className={mono}>
+            <span className="mr-2.5 inline-block h-1.5 w-1.5 bg-copper align-[1px]" />
+            Open to Opportunities
+          </p>
+          <p className={mono}>Lakshmipur, Bangladesh · Open to Remote &amp; Relocation</p>
+        </div>
+
+        {/* ── Main content ── */}
+        <motion.div
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+          initial="hidden"
+          animate="show"
+          className="relative z-10 flex flex-col justify-center px-[5vw] pb-10 pt-7 lg:min-h-screen lg:max-w-[54vw] lg:pb-[130px] lg:pt-[160px]"
+        >
+          <motion.p variants={fade} className={`${mono} mb-[18px] !text-copper`}>01 / Home</motion.p>
+
+          <motion.h1
+            variants={fade}
+            className="whitespace-nowrap font-serif text-[44px] font-normal leading-none tracking-[-0.04em] sm:text-[64px] lg:text-[clamp(64px,7vw,120px)]"
+          >
+            Asfak <em className="italic">Shahrier</em>
+          </motion.h1>
+
+          <motion.p
+            variants={fade}
+            className={`${mono} mt-[26px] flex max-w-[640px] flex-col text-[13px] leading-loose !text-sand lg:flex-row lg:flex-wrap`}
+          >
+            {roles.map((role, i) => (
+              <span key={role} className="whitespace-nowrap">
+                {role}
+                {i < roles.length - 1 && <span className="mx-2.5 hidden text-copper lg:inline">·</span>}
+              </span>
+            ))}
+          </motion.p>
+
+          <motion.p variants={fade} className="mt-6 max-w-[520px] text-base leading-[1.65] text-cream-2 lg:text-lg">
+            Building production web apps with <span className="font-medium text-sand">Laravel, Angular &amp; React</span>,
+            backed by strong competitive programming fundamentals and hands-on AI integration.
+          </motion.p>
+
+          <motion.div variants={fade} className="mt-[34px] flex flex-wrap items-center gap-[26px] text-sm">
+            <a
+              href="#projects"
+              className="inline-flex items-center gap-2 rounded-full border border-cream/25 bg-ink/60 px-6 py-3 transition-colors hover:border-cream/50 hover:text-peach"
+            >
+              View Projects <FiArrowDown size={14} />
+            </a>
+            <a href="#contact" className="inline-flex items-center gap-1 border-b border-cream pb-1 transition-colors hover:text-peach">
+              Get In Touch <FiArrowUpRight size={14} />
+            </a>
+            <a
+              href="/resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-b border-cream/35 pb-1 text-cream-2 transition-colors hover:border-cream hover:text-peach"
+            >
+              Resume
+            </a>
+          </motion.div>
+        </motion.div>
+
+        {/* ── Bottom meta: links ── */}
+        <div className="relative z-10 mx-[5vw] mb-8 flex flex-col gap-3 border-t border-cream/10 pt-4 lg:absolute lg:inset-x-[5vw] lg:bottom-[26px] lg:mx-0 lg:mb-0 lg:flex-row lg:justify-between">
+          <p className={mono}>
+            {socials.map(({ label, href }, i) => (
+              <span key={label}>
+                {i > 0 && ' · '}
+                <a href={href} target="_blank" rel="noopener noreferrer" className={textLink}>
+                  {label} <FiArrowUpRight size={11} className="text-copper" />
+                </a>
+              </span>
+            ))}
+          </p>
+          <a href={`mailto:${EMAIL}`} className={`${mono} ${textLink}`}>
+            {EMAIL} <FiArrowUpRight size={11} className="text-copper" />
+          </a>
+        </div>
+      </section>
+
+      <HeroStats />
+    </>
   );
 }

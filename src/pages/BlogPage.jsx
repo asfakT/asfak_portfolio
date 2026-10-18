@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowLeft, FiSearch } from 'react-icons/fi';
-import SectionTitle from '../components/ui/SectionTitle';
+import { FiSearch } from 'react-icons/fi';
+import SectionHeader from '../components/ui/SectionHeader';
 import BlogCard from '../components/Blog/BlogCard';
 import { blogPosts } from '../data/blog';
 
@@ -21,40 +21,37 @@ export default function BlogPage() {
   });
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: 'var(--bg-base)' }}
-    >
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 pt-28 pb-24">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors mb-8"
-        >
-          <FiArrowLeft size={16} />
+    <div className="min-h-screen font-dm text-cream" style={{ background: 'var(--bg-base)' }}>
+      <div className="px-[5vw] pb-24 pt-32">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-stone transition-colors hover:text-peach">
+          <span className="text-copper">←</span>
           Back to Home
         </Link>
 
-        <SectionTitle
-          label="/ blog"
-          title="All Posts"
-          subtitle="Articles on databases, system design, and software engineering, published on Medium."
-        />
+        <div className="mt-10">
+          <SectionHeader
+            as="h1"
+            label="blog"
+            title="All"
+            titleEm="Posts"
+            subtitle="Articles on databases, system design, and software engineering, published on Medium."
+          />
+        </div>
 
         {/* Filter + search bar */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div className="mt-16 flex flex-col gap-5 border-b border-cream/10 pb-[18px] md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {tags.map((t) => {
               const active = t === tag;
               return (
                 <button
                   key={t}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => setTag(t)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    active
-                      ? 'text-white border-transparent'
-                      : 'text-gray-400 border-white/10 hover:text-white hover:border-white/25'
+                  className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                    active ? 'border-copper text-cream' : 'border-cream/[0.16] text-stone hover:border-cream/35 hover:text-cream'
                   }`}
-                  style={active ? { background: 'rgba(59,130,246,0.18)', borderColor: 'rgba(59,130,246,0.4)' } : {}}
                 >
                   {t}
                 </button>
@@ -62,28 +59,28 @@ export default function BlogPage() {
             })}
           </div>
 
-          <div className="relative md:w-64">
-            <FiSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <label className="flex w-full items-center gap-2.5 border-b border-cream/25 py-2 transition-colors focus-within:border-copper md:w-72">
+            <FiSearch size={16} className="flex-none text-[#9E978E]" aria-hidden="true" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search posts..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-gray-200 placeholder-gray-500 border outline-none focus:border-blue-500/50 transition-colors"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}
+              aria-label="Search posts"
+              className="w-full bg-transparent text-[15px] text-cream outline-none placeholder:text-[#9E978E]"
             />
-          </div>
+          </label>
         </div>
 
-        {/* Grid */}
+        {/* Card grid — same cards as the homepage slider */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="mt-12 grid grid-cols-1 gap-x-[3vw] gap-y-12 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((post) => (
               <BlogCard key={post.id} post={post} />
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-16">No posts match your search.</p>
+          <p className="py-16 text-center font-serif text-[22px] italic text-[#9E978E]">No posts match your search.</p>
         )}
       </div>
     </div>

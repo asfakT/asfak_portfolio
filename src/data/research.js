@@ -5,7 +5,7 @@ export const researchPapers = [
     status: 'Published',
     venue: 'Communications in Software and Systems',
     supervisor: 'Dr. Syful Islam, GSTU',
-    year: 2025,
+    year: 2026,
     abstract:
       'A mixed-methods study of link-sharing in the NPM ecosystem: what maintainers share on Twitter, which domains dominate, and how fast links decay.',
     findings: [
@@ -23,10 +23,9 @@ export const researchPapers = [
   {
     id: 2,
     title: "Predicting CSE Undergraduate Students' Careers Using Machine Learning Algorithms in the Context of Bangladesh",
-    status: 'Under Review',
-    venue: 'IEEE Conference',
+    status: 'Manuscript Completed',
     supervisor: 'Dr. Saleh Ahmed, GSTU',
-    year: 2025,
+    year: 2026,
     abstract:
       "The first multi-label ML framework predicting CSE students' career paths in Bangladesh — built on survey data from 468 students across 47 universities (24 features, 10 classifiers).",
     findings: [

@@ -1,13 +1,11 @@
-import { motion } from 'framer-motion';
+import Logo from '../ui/Logo';
 import {
-  FiMail, FiGithub, FiLinkedin,
-  FiArrowUpCircle, FiMapPin, FiSend, FiPhone,
+  FiGithub, FiLinkedin,
   FiBookOpen, FiBriefcase, FiActivity,
 } from 'react-icons/fi';
 import { FaWhatsapp, FaMedium } from 'react-icons/fa';
-import { SiCodeforces } from 'react-icons/si';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
 
 const socialLinks = [
   {
@@ -64,159 +62,104 @@ const openTo = [
 
 const navLinks = ['Home', 'About', 'Experience', 'Projects', 'Skills', 'Research', 'Achievements', 'Certificates'];
 
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
+const EMAIL = 'shahrierasfak27@gmail.com';
+
 export default function Contact() {
   return (
-    <SectionWrapper id="contact">
-      <SectionTitle
-        label="/ contact"
-        title="Let's Work Together"
+    <EditorialSection id="contact" className="!pb-10">
+      <SectionHeader
+        number="10"
+        label="contact"
+        title="Let's Work"
+        titleEm="Together"
         subtitle="Have an opportunity or idea in mind? Let's talk."
       />
 
-      {/* ── Email CTA banner ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="relative overflow-hidden rounded-xl p-8 md:p-10 mb-14 flex flex-col md:flex-row items-center justify-between gap-6"
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.1)',
-        }}
-      >
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-            <span className="text-green-400 text-sm font-medium">Available for opportunities</span>
-          </div>
-          <h3 className="text-white text-2xl md:text-3xl font-extrabold mb-1">
-            Got something in mind?
-          </h3>
-          <p className="text-gray-300 text-base flex items-center gap-2">
-            <FiMapPin size={14} className="text-blue-400" />
-            Lakshmipur, Bangladesh · Open to Remote &amp; Relocation
-          </p>
+      {/* ── Email CTA ── */}
+      <div className="mt-16 border-y border-cream/10 py-10">
+        <p className={`${mono} inline-flex items-center !text-green-400`}>
+          <span className="mr-2.5 inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+          Available for opportunities
+        </p>
+        <p className="mt-3.5 font-serif text-[28px] tracking-[-0.015em] lg:text-[clamp(28px,2.6vw,42px)]">Got something in mind?</p>
+        <a
+          href={`mailto:${EMAIL}`}
+          className="mt-3.5 inline-block break-all border-b border-cream/30 font-serif text-[34px] italic leading-[1.05] tracking-[-0.02em] transition-colors hover:border-copper hover:text-peach lg:text-[clamp(34px,4.6vw,76px)]"
+        >
+          {EMAIL} <span className="not-italic text-copper">↗</span>
+        </a>
+        <div className="mt-[26px] flex flex-wrap items-center gap-x-7 gap-y-4">
+          <a
+            href={`mailto:${EMAIL}`}
+            className="inline-flex items-center gap-2 rounded-full border border-cream/30 px-6 py-[13px] text-sm transition-colors hover:border-cream/60 hover:text-peach"
+          >
+            Send Email <span className="text-copper">→</span>
+          </a>
+          <p className={mono}>Lakshmipur, Bangladesh · Open to Remote &amp; Relocation</p>
         </div>
+      </div>
 
-        <motion.a
-          href="mailto:shahrierasfak27@gmail.com"
-          whileTap={{ scale: 0.97 }}
-          className="relative z-10 flex items-center gap-3 px-7 py-4 rounded-lg font-bold text-white text-base flex-shrink-0 transition-colors hover:brightness-110"
-          style={{ background: '#2563EB' }}
-        >
-          <FiSend size={18} />
-          Send Email
-        </motion.a>
-      </motion.div>
-
-      {/* ── Main grid: open-to + social ── */}
-      <div className="grid lg:grid-cols-2 gap-10 mb-16">
-
-        {/* Left — open to */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-        >
-          <p className="text-gray-300 text-base leading-relaxed mb-6">
+      {/* ── Open to + socials ── */}
+      <div className="mt-[72px] grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-[6vw]">
+        <div>
+          <p className="max-w-[56ch] text-[17px] leading-[1.7] text-cream-2">
             Whether you're a university admissions committee, a recruiter from a top tech company,
             or a fellow engineer — I'd love to hear from you.
           </p>
-
-          {openTo.map((item, i) => {
-            const Icon = item.icon;
-            return (
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="flex gap-4 p-5 rounded-xl border transition-all duration-300 hover:border-white/20"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
-            >
-              <Icon size={18} className="text-gray-400 flex-shrink-0 mt-1" />
-              <div>
-                <p className="text-white font-bold text-base mb-1">{item.title}</p>
-                <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
+          <div className="mt-[22px] border-t border-cream/10">
+            {openTo.map((item, i) => (
+              <div key={item.title} className="grid grid-cols-[40px_1fr] gap-4 border-b border-cream/10 py-5">
+                <span className={`${mono} !text-copper`}>{String(i + 1).padStart(2, '0')}</span>
+                <div>
+                  <p className="font-serif text-2xl tracking-[-0.01em]">{item.title}</p>
+                  <p className="mt-1 text-[14.5px] leading-[1.55] text-stone">{item.desc}</p>
+                </div>
               </div>
-            </motion.div>
-            );
-          })}
-        </motion.div>
+            ))}
+          </div>
+        </div>
 
-        {/* Right — social grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-        >
-          {socialLinks.map(({ label, handle, href, icon: Icon, color, accent }, i) => (
-            <motion.a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.35, delay: i * 0.05 }}
-              className="flex items-center gap-3.5 p-4 rounded-xl border border-white/[0.09] bg-white/[0.02] transition-colors duration-200 hover:border-white/20"
-            >
-              <Icon size={20} className="flex-shrink-0" style={{ color: accent }} />
-
-              <div className="min-w-0 flex-1">
-                <p className="text-white font-bold text-sm">{label}</p>
-                <p className="text-gray-400 text-xs font-mono truncate">{handle}</p>
-              </div>
-            </motion.a>
-          ))}
-        </motion.div>
+        <div>
+          <p className={mono}>Find me on</p>
+          <div className="mt-[22px] border-t border-cream/10">
+            {socialLinks.map(({ label, handle, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group grid grid-cols-[1fr_auto] items-baseline gap-4 border-b border-cream/10 py-5 transition-[padding] duration-300 hover:pl-2"
+              >
+                <div>
+                  <p className="font-serif text-2xl transition-colors group-hover:text-peach">{label}</p>
+                  <p className="mt-1 font-mono text-xs text-[#9E978E]">{handle}</p>
+                </div>
+                <span className="text-copper">↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Footer ── */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="pt-10 border-t"
-        style={{ borderColor: 'rgba(255,255,255,0.08)' }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
-
-          {/* Col 1 — brand */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center font-extrabold text-sm text-white border border-white/15"
-              >
-                AS
-              </div>
-              <div>
-                <p className="text-white font-bold text-base">Asfak Shahrier</p>
-                <p className="text-gray-400 text-xs">Software Engineer · AI &amp; ML Enthusiast</p>
-              </div>
-            </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
+      <footer className="mt-[72px] border-t border-cream/10 pt-10">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.3fr_1fr_1fr] md:gap-[5vw]">
+          <div>
+            <p className="flex items-center gap-3 font-serif text-[28px]">
+              <Logo size={40} />
+              Asfak Shahrier
+            </p>
+            <p className="mt-1 text-[13px] text-[#9E978E]">Software Engineer · AI &amp; ML Enthusiast</p>
+            <p className="mt-3.5 max-w-[38ch] text-[14.5px] leading-[1.6] text-stone">
               Building scalable systems, solving hard problems, and advancing AI research.
             </p>
-            <p className="text-gray-500 text-xs flex items-center gap-1.5">
-              <FiMapPin size={12} className="text-blue-400" />
-              Lakshmipur, Bangladesh
-            </p>
+            <p className="mt-3 text-[13px] text-[#9E978E]">Lakshmipur, Bangladesh</p>
           </div>
 
-          {/* Col 2 — quick nav */}
           <div>
-            <p className="text-white font-bold text-xs mb-4 uppercase tracking-widest">Quick Links</p>
-            <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+            <p className={mono}>Quick Links</p>
+            <div className="mt-3.5 grid grid-cols-2 gap-x-[18px] gap-y-2 text-sm text-stone">
               {navLinks.map((link) => (
                 <a
                   key={link}
@@ -225,75 +168,48 @@ export default function Contact() {
                     e.preventDefault();
                     document.getElementById(link.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="text-gray-400 text-sm hover:text-blue-400 transition-colors duration-200 flex items-center gap-1.5 group"
+                  className="transition-colors hover:text-peach"
                 >
-                  <span className="w-1 h-1 rounded-full bg-blue-500/40 group-hover:bg-blue-400 transition-colors flex-shrink-0" />
                   {link}
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Col 3 — contact info */}
           <div>
-            <p className="text-white font-bold text-xs mb-4 uppercase tracking-widest">Get In Touch</p>
-            <div className="space-y-3">
-              <a
-                href="mailto:shahrierasfak27@gmail.com"
-                className="flex items-center gap-3 text-gray-400 hover:text-blue-400 transition-colors duration-200 group"
-              >
-                <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <FiMail size={14} className="text-blue-400" />
-                </div>
-                <span className="text-sm break-all">shahrierasfak27@gmail.com</span>
+            <p className={mono}>Get In Touch</p>
+            <div className="mt-3.5 grid gap-2 text-sm text-stone">
+              <a href={`mailto:${EMAIL}`} className="break-all transition-colors hover:text-peach">
+                {EMAIL}
               </a>
-              <a
-                href="tel:+8801796512473"
-                className="flex items-center gap-3 text-gray-400 hover:text-blue-400 transition-colors duration-200 group"
-              >
-                <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <FiPhone size={14} className="text-blue-400" />
-                </div>
-                <span className="text-sm">+880 1796512473</span>
+              <a href="tel:+8801796512473" className="transition-colors hover:text-peach">
+                +880 1796512473
               </a>
-            </div>
-
-            {/* Social icons */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {socialLinks.map(({ label, href, icon: Icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition-all duration-200"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
+              <p>
+                {socialLinks.map(({ label, href }, i) => (
+                  <span key={label}>
+                    {i > 0 && ' · '}
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-peach">
+                      {label}
+                    </a>
+                  </span>
+                ))}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div
-          className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-        >
-          <p className="text-gray-400 text-xs">
-            © {new Date().getFullYear()} Asfak Shahrier · Built with React, Tailwind &amp; Framer Motion
-          </p>
-
-          <motion.button
+        <div className="mt-9 flex flex-wrap justify-between gap-3 border-t border-cream/10 pt-[18px] text-[12.5px] text-[#9E978E]">
+          <p>© {new Date().getFullYear()} Asfak Shahrier · Built with React, Tailwind &amp; Framer Motion</p>
+          <button
+            type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2 text-gray-400 hover:text-blue-400 text-sm font-semibold transition-colors duration-200"
+            className="transition-colors hover:text-peach"
           >
-            Back to top
-            <FiArrowUpCircle size={18} />
-          </motion.button>
+            Back to top <span className="text-copper">↑</span>
+          </button>
         </div>
-      </motion.footer>
-    </SectionWrapper>
+      </footer>
+    </EditorialSection>
   );
 }

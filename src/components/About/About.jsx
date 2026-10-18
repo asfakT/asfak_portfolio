@@ -1,9 +1,7 @@
-import { motion } from 'framer-motion';
 import { FiMapPin, FiMail, FiCalendar, FiBook, FiPhone } from 'react-icons/fi';
 import heroImg from '../../assets/about_us_image.jpeg';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
-import Badge from '../ui/Badge';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
 
 const education = [
   {
@@ -12,7 +10,7 @@ const education = [
     url: 'https://gstu.edu.bd/s/',
     period: '2020 — 2024',
     // gpa: 'CGPA 3.13 / 4.00',
-    highlights: ['Graduated Dec 2024', '2 Research Papers (1 Published, 1 Under Review)'],
+    highlights: ['Graduated Dec 2024', '2 Research Papers (1 Published, 1 Completed)'],
     color: 'blue',
   },
   {
@@ -42,209 +40,135 @@ const personalInfo = [
   { icon: FiBook, label: 'Goal', value: 'AI Research & Application Development' },
 ];
 
+const focusAreas = ['AI & ML Enthusiast', 'Full Stack Development', 'AI Integration', 'ML Research', 'System Design'];
+
+// Small uppercase mono label
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
+
 export default function About() {
   return (
-    <SectionWrapper id="about">
-      <SectionTitle
-        label="/ about me"
-        title="The Engineer Behind the Code"
+    <EditorialSection id="about">
+      <SectionHeader
+        number="02"
+        label="about me"
+        title="The Engineer Behind"
+        titleEm="the Code"
         subtitle="Curious about systems, algorithms, and applied AI research."
       />
 
-      {/* Top: image + bio side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start mb-14">
-
-        {/* Left: image + contact info stacked */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="lg:col-span-2"
-        >
-          <div className="w-full max-w-[360px] mx-auto lg:mx-0 space-y-5">
-            {/* Image */}
-            <div className="relative">
-              {/* Image frame */}
-              <div
-                className="relative overflow-hidden w-full"
-                style={{
-                  aspectRatio: '34 / 42',
-                  borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                <img
-                  src={heroImg}
-                  alt="Asfak Shahrier"
-                  className="w-full h-full object-cover"
-                  style={{ objectPosition: 'top center' }}
-                />
-              </div>
-
-            </div>
+      <div className="mt-12 grid grid-cols-1 items-start gap-10 lg:mt-20 lg:grid-cols-[minmax(260px,1fr)_2.2fr] lg:gap-[6vw]">
+        {/* Photo — sticks while the bio scrolls on desktop */}
+        <aside className="lg:sticky lg:top-[110px]">
+          <div className="aspect-[34/42] w-full overflow-hidden rounded">
+            <img
+              src={heroImg}
+              alt="Asfak Shahrier"
+              className="h-full w-full object-cover object-top grayscale sepia-[.3] brightness-[.85] contrast-[1.08]"
+            />
           </div>
-        </motion.div>
+        </aside>
 
-        {/* Bio — right, 3 columns on lg */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="lg:col-span-3 space-y-6"
-        >
-          <div className="space-y-6 text-gray-300 leading-relaxed text-base md:text-lg max-w-[60ch]">
-            <p className="text-lg md:text-xl text-gray-200">
-              I'm a Software Engineer with hands-on experience building production web applications using{' '}
-              <span className="text-blue-400 font-semibold">Laravel</span>,{' '}
-              <span className="text-blue-400 font-semibold">Angular</span>, and{' '}
-              <span className="text-blue-400 font-semibold">Django</span>, and integrating AI into them through the OpenAI and Gemini APIs.
-            </p>
+        <div>
+          {/* Lead paragraph */}
+          <p className="font-serif text-[26px] leading-[1.3] tracking-[-0.01em] text-cream lg:text-[clamp(26px,2.4vw,36px)]">
+            I'm a Software Engineer with hands-on experience building production web applications using{' '}
+            <b className="font-normal italic text-sand">Laravel</b>,{' '}
+            <b className="font-normal italic text-sand">Angular</b>, and{' '}
+            <b className="font-normal italic text-sand">Django</b>, and integrating AI into them through the OpenAI and Gemini APIs.
+          </p>
+
+          {/* Remaining bio in two columns */}
+          <div className="mt-10 gap-12 text-base leading-[1.75] text-cream-2 lg:columns-2 [&>p]:mb-[22px] [&>p]:break-inside-avoid">
             <p>
               Years of competitive programming, with{' '}
-              <span className="text-white font-bold">3200+ problems</span> solved across Codeforces, LeetCode, CodeChef, and AtCoder,
+              <strong className="font-medium text-cream">3600+ problems</strong> solved across Codeforces, LeetCode, CodeChef, and AtCoder,
               sharpened my algorithmic thinking and my ability to write correct, optimized code under pressure.
             </p>
             <p>
               I also enjoy research that turns into real products. I've{' '}
-              <span className="text-white font-bold">published</span> a paper at Communications in Software and Systems
-              (NPM link-sharing), with another <span className="text-white font-bold">under review</span> at IEEE (ML-based
+              <strong className="font-medium text-cream">published</strong> a paper at Communications in Software and Systems
+              (NPM link-sharing), with another <strong className="font-medium text-cream">completed manuscript</strong> (ML-based
               career prediction), and I love building AI applications on top of large language models.
             </p>
             <p>
-              What drives me is <span className="text-blue-400 font-semibold">applied AI</span>. Right now I'm deepening my{' '}
-              <span className="text-white font-bold">system design</span> skills and focusing on building{' '}
-              <span className="text-blue-400 font-semibold">AI-powered software</span> that's practical, scalable, and genuinely
+              What drives me is <b className="font-medium text-sand">applied AI</b>. Right now I'm deepening my{' '}
+              <strong className="font-medium text-cream">system design</strong> skills and focusing on building{' '}
+              <b className="font-medium text-sand">AI-powered software</b> that's practical, scalable, and genuinely
               useful to real users.
             </p>
           </div>
 
-        </motion.div>
+          {/* Current Focus */}
+          <div className="mt-7 border-t border-cream/10 pt-[22px]">
+            <p className={mono}>Current Focus</p>
+            <div className="mt-3.5 flex flex-wrap gap-2.5">
+              {focusAreas.map((tag) => (
+                <span key={tag} className="rounded-full border border-cream/[0.18] px-4 py-2 text-sm text-cream-2">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Contact info — 2×2 grid */}
+          {/* 1 column on phones, 2×2 from sm up */}
+          <dl className="mt-9 grid grid-cols-1 border-y border-cream/10 sm:grid-cols-2">
+            {personalInfo.map(({ label, value, value2 }, i) => (
+              <div
+                key={label}
+                className={`py-5 sm:pr-6 lg:py-[22px] ${i > 0 ? 'border-t border-cream/10' : ''} ${
+                  i === 1 ? 'sm:border-t-0' : ''
+                } ${i % 2 ? 'sm:border-l sm:border-cream/10 sm:pl-6' : ''}`}
+              >
+                <dt className={mono}>{label}</dt>
+                <dd className="mt-2.5 break-words text-[15px] leading-normal text-cream">
+                  {value}
+                  {value2 && <span className="mt-0.5 block text-[13px] text-[#9E978E]">{value2}</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
 
-      {/* Current Focus — full width */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="p-5 rounded-xl border border-white/[0.08] mb-6"
-        style={{ background: 'rgba(255,255,255,0.02)' }}
-      >
-        <p className="text-gray-400 text-xs font-medium mb-3 uppercase tracking-wider">Current Focus</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-          {['AI & ML Enthusiast', 'Full Stack Development', 'AI Integration', 'ML Research', 'System Design'].map((tag) => (
-            <span
-              key={tag}
-              className="text-center px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-200 bg-white/[0.03] border border-white/10"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Contact info — full-width 4-across row */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-14"
-      >
-        {personalInfo.map(({ icon: Icon, label, value, value2 }) => (
-          <div
-            key={label}
-            className="flex items-start gap-3 p-4 rounded-xl border border-white/8 bg-white/5 transition-colors hover:border-white/20"
-          >
-            <Icon size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">{label}</p>
-              <p className="text-gray-200 text-sm font-semibold mt-0.5 break-words leading-snug">{value}</p>
-              {value2 && <p className="text-gray-400 text-xs mt-1 break-words leading-snug">{value2}</p>}
-            </div>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Education */}
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-      >
-        <h3 className="text-white font-bold text-xl flex items-center gap-2 mb-6">
-          <FiBook className="text-blue-400" />
+      {/* Education — 3 columns */}
+      <div className="mt-20 lg:mt-[110px]">
+        <h3 className="mb-[30px] font-serif text-[36px] font-normal tracking-[-0.02em] lg:text-[clamp(36px,3.6vw,56px)]">
           Education
         </h3>
-
-        <div className="space-y-4">
-          {/* BSc — primary full-width card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="p-6 rounded-xl border transition-all duration-300 hover:border-blue-500/30"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-              <div>
-                <h4 className="text-white font-bold text-base leading-snug">{education[0].degree}</h4>
-                <a
-                  href={education[0].url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 text-sm mt-1 inline-block hover:text-blue-400 transition-colors"
-                >
-                  {education[0].institution}
-                </a>
-              </div>
-              <Badge color="blue" size="sm">{education[0].period}</Badge>
-            </div>
-            {education[0].gpa && <p className="text-blue-400 text-lg font-extrabold mb-3">{education[0].gpa}</p>}
-            <ul className="flex flex-wrap gap-x-8 gap-y-1.5">
-              {education[0].highlights.map((h) => (
-                <li key={h} className="text-gray-400 text-sm flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                  {h}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* HSC + SSC — compact side by side */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            {education.slice(1).map((edu, idx) => (
-              <motion.div
-                key={edu.degree}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: idx * 0.1 }}
-                className="p-5 rounded-xl border transition-all duration-300 hover:border-blue-500/20"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.07)' }}
+        <div className="grid grid-cols-1 border-y border-cream/10 lg:grid-cols-[1.4fr_1fr_1fr]">
+          {education.map((edu, i) => (
+            <div
+              key={edu.degree}
+              className={`py-6 lg:px-7 lg:pb-[34px] lg:pt-[30px] ${
+                i === 0 ? 'lg:pl-0' : 'border-t border-cream/10 lg:border-l lg:border-t-0'
+              }`}
+            >
+              <p className="font-mono text-xs tracking-[1.5px] text-copper">{String(i + 1).padStart(2, '0')}</p>
+              <p className="mt-[18px] font-serif text-[24px] leading-[1.15] tracking-[-0.01em] lg:text-[clamp(24px,2vw,30px)]">
+                {edu.degree}
+              </p>
+              <a
+                href={edu.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2.5 inline-block text-sm leading-[1.55] text-stone transition-colors hover:text-peach"
               >
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0">
-                    <p className="text-white font-semibold text-sm leading-snug">{edu.degree}</p>
-                    <a
-                      href={edu.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-500 text-xs mt-1 leading-relaxed inline-block hover:text-blue-400 transition-colors"
-                    >
-                      {edu.institution}
-                    </a>
-                  </div>
+                {edu.institution} <span className="text-copper">↗</span>
+              </a>
+              {edu.gpa && <p className="mt-3 font-serif text-xl text-sand">{edu.gpa}</p>}
+              {(edu.period !== '—' || edu.highlights.length > 0) && (
+                <div className="mt-[18px] text-sm leading-[1.8] text-[#9E978E]">
+                  {edu.period !== '—' && <p className={`${mono} !text-sand`}>{edu.period}</p>}
+                  {edu.highlights.map((h) => (
+                    <p key={h}>{h}</p>
+                  ))}
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              )}
+            </div>
+          ))}
         </div>
-      </motion.div>
-    </SectionWrapper>
+      </div>
+    </EditorialSection>
   );
 }
