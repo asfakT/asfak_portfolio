@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX, FiChevronDown } from 'react-icons/fi';
+import { FiMenu, FiX, FiChevronDown, FiArrowUpRight } from 'react-icons/fi';
 import Logo from '../ui/Logo';
 
 const navLinks = [
@@ -83,32 +83,26 @@ export default function Navbar() {
         initial={{ y: -90, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-black/92 backdrop-blur-xl border-b shadow-2xl shadow-black/60'
-            : 'bg-transparent'
-        }`}
-        style={scrolled ? { borderColor: 'rgba(255,255,255,0.07)' } : {}}
+        className="fixed inset-x-0 top-4 z-50 px-[5vw] font-dm"
       >
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
-          {/* h-20 = 80px navbar height */}
-          <div className="flex items-center justify-between h-20">
+        <div
+          className={`rounded-[14px] border border-cream/10 px-4 sm:px-5 transition-colors duration-300 ${
+            scrolled ? 'bg-[#0E0D0C]/95' : 'bg-[#0E0D0C]/85'
+          }`}
+        >
+          {/* h-[68px] navbar height; keep scroll-padding-top in index.css in sync */}
+          <div className="flex items-center justify-between h-[68px]">
 
             {/* ── Logo ── */}
             <a
               href="#home"
               onClick={(e) => { e.preventDefault(); handleNavClick('#home'); }}
+              aria-label="Asfak Shahrier, home"
               className="flex items-center gap-3 group flex-shrink-0"
             >
-              <span
-                className="transition-transform duration-300 group-hover:scale-105"
-                style={{ filter: 'drop-shadow(0 0 14px rgba(59,130,246,0.45))' }}
-              >
-                <Logo size={44} />
-              </span>
-              <span className="hidden sm:block text-sm font-semibold uppercase tracking-[0.2em]">
-                <span className="text-gray-200">Asfak</span>{' '}
-                <span className="text-gray-400">Shahrier</span>
+              <Logo size={40} />
+              <span className="hidden sm:block font-serif text-[26px] leading-none text-cream">
+                Asfak Shahrier
               </span>
             </a>
 
@@ -134,8 +128,8 @@ export default function Navbar() {
                     <a
                       href={link.href}
                       onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                      className={`relative flex items-center gap-1 px-4 py-2.5 text-[15px] font-medium rounded-lg transition-all duration-200 ${
-                        isActive ? 'text-white' : 'text-gray-400 hover:text-white'
+                      className={`group relative flex items-center gap-1 px-3.5 py-2.5 text-[15px] rounded-lg transition-colors duration-200 ${
+                        isActive ? 'text-cream' : 'text-cream-2/80 hover:text-cream'
                       }`}
                     >
                       {isActive && (
@@ -145,12 +139,19 @@ export default function Navbar() {
                           style={{ background: 'rgba(255,255,255,0.07)' }}
                         />
                       )}
-                      <span className="relative z-10">{link.label}</span>
-                      {hasChildren && <FiChevronDown size={14} className="relative z-10" />}
-                      {isActive && (
+                      <span className="relative z-10">
+                        {link.label}
                         <span
-                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"
-                          style={{ boxShadow: '0 0 6px #3B82F6' }}
+                          aria-hidden="true"
+                          className={`absolute -bottom-1 left-0 h-0.5 w-full origin-left transition-transform duration-300 ease-out ${
+                            isActive ? 'scale-x-100 bg-copper' : 'scale-x-0 bg-peach group-hover:scale-x-100'
+                          }`}
+                        />
+                      </span>
+                      {hasChildren && (
+                        <FiChevronDown
+                          size={14}
+                          className={`relative z-10 transition-transform duration-200 ${openDropdown === link.label ? 'rotate-180' : ''}`}
                         />
                       )}
                     </a>
@@ -165,16 +166,13 @@ export default function Navbar() {
                             transition={{ duration: 0.15 }}
                             className="absolute top-full left-0 pt-2 min-w-[220px]"
                           >
-                            <div
-                              className="rounded-xl border overflow-hidden shadow-2xl shadow-black/60"
-                              style={{ background: 'rgba(10,10,10,0.98)', borderColor: 'rgba(255,255,255,0.1)' }}
-                            >
+                            <div className="rounded-xl border border-cream/10 bg-[#0E0D0C] overflow-hidden shadow-2xl shadow-black/60 py-1.5">
                               {link.children.map((child) => (
                                 <a
                                   key={child.label}
                                   href={child.href}
                                   onClick={(e) => { e.preventDefault(); handleNavClick(child.href, child.tab); }}
-                                  className="block px-4 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                                  className="block px-4 py-2.5 text-sm text-cream-2 hover:text-cream hover:bg-cream/[0.04] transition-colors"
                                 >
                                   {child.label}
                                 </a>
@@ -193,19 +191,14 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
 <a
                 href="mailto:shahrierasfak27@gmail.com"
-                className="hidden md:inline-flex items-center px-5 py-2.5 text-[15px] font-semibold text-white rounded-xl transition-all duration-200 hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
-                  boxShadow: '0 0 18px rgba(16,185,129,0.5), 0 0 6px rgba(16,185,129,0.35)',
-                }}
+                className="hidden md:inline-flex items-center gap-1.5 px-5 py-2.5 text-[15px] font-medium text-cream rounded-full border border-cream/25 transition-colors duration-200 hover:border-cream/50"
               >
-                Hire Me
+                Hire Me <FiArrowUpRight size={15} />
               </a>
 
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden p-2.5 rounded-xl text-gray-300 hover:text-white transition-colors"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
+                className="lg:hidden p-2.5 rounded-lg text-cream-2 hover:text-cream bg-cream/[0.06] transition-colors"
                 aria-label="Toggle menu"
               >
                 {mobileOpen ? <FiX size={22} /> : <FiMenu size={22} />}
@@ -223,14 +216,9 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-20 left-0 right-0 z-40 lg:hidden"
-            style={{
-              background: 'rgba(0,0,0,0.97)',
-              backdropFilter: 'blur(20px)',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-            }}
+            className="fixed top-[96px] inset-x-[5vw] z-40 lg:hidden rounded-[14px] border border-cream/10 bg-[#0E0D0C] font-dm max-h-[calc(100vh-112px)] overflow-y-auto"
           >
-            <div className="px-5 py-5 space-y-1">
+            <div className="px-3 py-3 space-y-1">
               {navLinks.map((link) => {
                 const isActive = link.children
                   ? link.children.some((c) => c.href.slice(1) === active)
@@ -240,25 +228,22 @@ export default function Navbar() {
                     <a
                       href={link.href}
                       onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                      className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium transition-colors ${
-                        isActive
-                          ? 'text-white'
-                          : 'text-gray-400 hover:text-white'
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base transition-colors ${
+                        isActive ? 'text-cream bg-cream/[0.06]' : 'text-cream-2/80 hover:text-cream'
                       }`}
-                      style={isActive ? { background: 'rgba(59,130,246,0.12)', color: '#fff' } : {}}
                     >
-                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-copper flex-shrink-0" />}
                       {link.label}
                     </a>
 
                     {link.children && (
-                      <div className="ml-4 pl-3 border-l space-y-0.5 mb-1" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <div className="ml-4 pl-3 border-l border-cream/10 space-y-0.5 mb-1">
                         {link.children.map((child) => (
                           <a
                             key={child.label}
                             href={child.href}
                             onClick={(e) => { e.preventDefault(); handleNavClick(child.href, child.tab); }}
-                            className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-white transition-colors"
+                            className="block px-4 py-2.5 rounded-lg text-sm text-stone hover:text-cream transition-colors"
                           >
                             {child.label}
                           </a>
@@ -271,10 +256,9 @@ export default function Navbar() {
               <div className="pt-3 pb-1">
                 <a
                   href="mailto:shahrierasfak27@gmail.com"
-                  className="block w-full text-center px-5 py-3.5 text-base font-semibold text-white rounded-xl transition-colors"
-                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}
+                  className="flex w-full items-center justify-center gap-1.5 px-5 py-3 text-base font-medium text-cream rounded-full border border-cream/25 transition-colors hover:border-cream/50"
                 >
-                  Hire Me
+                  Hire Me <FiArrowUpRight size={15} />
                 </a>
               </div>
             </div>

@@ -1,85 +1,52 @@
-import { useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination } from 'swiper/modules';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import ViewAllButton from '../ui/ViewAllButton';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
-import { SmallProjectCard } from './ProjectCard';
+import { Link } from 'react-router-dom';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
+import { FeaturedCard, ProjectRow } from './ProjectCard';
 import { featuredProjects, otherProjects } from '../../data/projects';
 
-// All projects in one uniform slider — CSE Career Prediction (id 1) placed last.
+// Homepage order: featured (except id 1), others, then id 1
 const allProjects = [
   ...featuredProjects.filter((p) => p.id !== 1),
   ...otherProjects,
   ...featuredProjects.filter((p) => p.id === 1),
 ];
 
-const navBtn =
-  'w-9 h-9 rounded-full flex items-center justify-center border border-white/15 bg-white/5 ' +
-  'text-gray-300 transition-colors hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-white ' +
-  'disabled:opacity-30 disabled:cursor-default';
+// Production work leads as large cards; everything else is a compact list
+const featured = allProjects.filter((p) => p.tag === 'Production');
+const rest = allProjects.filter((p) => p.tag !== 'Production');
 
 export default function Projects() {
-  const prevRef = useRef(null);
-  const nextRef = useRef(null);
-
   return (
-    <SectionWrapper id="projects">
-      <SectionTitle
-        label="/ projects"
-        title="Things I've Built"
+    <EditorialSection id="projects">
+      <SectionHeader
+        number="04"
+        label="projects"
+        title="Things"
+        titleEm="I've Built"
         subtitle="A selection of projects across full stack development, machine learning, and AI integration."
       />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="projects-swiper"
-      >
-        {/* Nav buttons — top right, never overlap cards */}
-        <div className="flex justify-end gap-2 mb-5">
-          <button ref={prevRef} aria-label="Previous projects" className={navBtn}>
-            <FiChevronLeft size={18} />
-          </button>
-          <button ref={nextRef} aria-label="Next projects" className={navBtn}>
-            <FiChevronRight size={18} />
-          </button>
-        </div>
+      <div className="mt-16 grid grid-cols-1 gap-14 lg:grid-cols-2 lg:gap-[4vw]">
+        {featured.map((project, i) => (
+          <FeaturedCard key={project.id} project={project} number={i + 1} />
+        ))}
+      </div>
 
-        <Swiper
-          modules={[Navigation, Pagination]}
-          spaceBetween={16}
-          slidesPerView={1}
-          navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
-          onBeforeInit={(swiper) => {
-            swiper.params.navigation.prevEl = prevRef.current;
-            swiper.params.navigation.nextEl = nextRef.current;
-          }}
-          pagination={{ clickable: true }}
-          breakpoints={{
-            640: { slidesPerView: 2 },
-            1024: { slidesPerView: 3 },
-          }}
-          className="pb-12"
-        >
-          {allProjects.map((project) => (
-            <SwiperSlide key={project.id} className="h-auto">
-              <SmallProjectCard project={project} />
-            </SwiperSlide>
+      <div className="mt-[90px]">
+        <p className="font-mono text-xs uppercase tracking-[1.5px] text-stone">More projects</p>
+        <div className="mt-5 border-t border-cream/10">
+          {rest.map((project, i) => (
+            <ProjectRow key={project.id} project={project} number={featured.length + i + 1} />
           ))}
-        </Swiper>
-
-        <div className="flex justify-center mt-2">
-          <ViewAllButton to="/projects">View All Projects</ViewAllButton>
         </div>
-      </motion.div>
-    </SectionWrapper>
+      </div>
+
+      <Link
+        to="/projects"
+        className="mt-14 inline-flex items-center gap-2 rounded-full border border-cream/25 px-6 py-[13px] text-sm transition-colors hover:border-cream/50 hover:text-peach"
+      >
+        View All Projects <span className="text-copper">→</span>
+      </Link>
+    </EditorialSection>
   );
 }

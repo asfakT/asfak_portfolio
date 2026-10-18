@@ -11,7 +11,7 @@ const SpeechRec =
 
 const mdComponents = {
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-sand underline underline-offset-2 transition-colors hover:text-peach">
       {children}
     </a>
   ),
@@ -30,10 +30,7 @@ const SUGGESTIONS = [
 
 function BotAvatar() {
   return (
-    <div
-      className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white"
-      style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
-    >
+    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-copper/40 bg-copper/[0.12] text-copper">
       <FaRobot size={15} />
     </div>
   );
@@ -149,11 +146,9 @@ export default function ChatWidget() {
       {/* Floating toggle button */}
       <motion.button
         onClick={() => setOpen((o) => !o)}
-        whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         aria-label={open ? 'Close chat' : 'Open chat'}
-        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center text-white"
-        style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 8px 30px rgba(59,130,246,0.45)' }}
+        className="fixed bottom-3 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-cream/30 bg-[#0d0d0d] text-cream shadow-[0_8px_28px_rgba(0,0,0,0.6)] transition-[color,border-color,box-shadow] duration-200 hover:border-peach/70 hover:text-peach hover:shadow-[0_8px_28px_rgba(0,0,0,0.6),0_0_22px_rgba(242,166,126,0.25)]"
       >
         <AnimatePresence mode="wait" initial={false}>
           {open ? (
@@ -166,6 +161,7 @@ export default function ChatWidget() {
             </motion.span>
           )}
         </AnimatePresence>
+        {!open && <span aria-hidden="true" className="absolute right-[3px] top-[3px] h-[11px] w-[11px] rounded-full border-2 border-ink bg-copper" />}
       </motion.button>
 
       {/* Chat panel */}
@@ -176,25 +172,23 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-            className="fixed bottom-24 right-6 z-[60] w-[min(380px,calc(100vw-2rem))] rounded-2xl overflow-hidden flex flex-col border"
+            className="fixed bottom-[76px] right-4 z-[60] flex w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[14px] border border-cream/[0.14] font-dm"
             style={{
-              background: '#0d0e14',
-              borderColor: 'rgba(255,255,255,0.1)',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+              background: '#0b0a09',
+              boxShadow: '0 24px 70px rgba(0,0,0,0.7)',
               maxHeight: 'min(560px, calc(100vh - 8rem))',
             }}
           >
             {/* Header */}
             <div
-              className="flex items-center justify-between gap-3 px-4 py-3 border-b flex-shrink-0"
-              style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(59,130,246,0.08)' }}
+              className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-cream/10 px-[18px] py-4"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <BotAvatar />
                 <div className="min-w-0">
-                  <p className="text-white font-bold text-sm leading-tight">Asfak's Assistant</p>
-                  <p className="text-emerald-400 text-[11px] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online · AI powered
+                  <p className="font-serif text-[22px] leading-[1.1] tracking-[-0.01em] text-cream">Asfak's Assistant</p>
+                  <p className="mt-[3px] flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[1.2px] text-stone">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Online · AI powered
                   </p>
                 </div>
               </div>
@@ -203,8 +197,8 @@ export default function ChatWidget() {
                   onClick={toggleVoice}
                   aria-label={voiceOn ? 'Mute voice' : 'Enable voice'}
                   title={voiceOn ? 'Voice on — replies read aloud' : 'Voice off'}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    voiceOn ? 'text-blue-400 hover:bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-peach/10 hover:text-peach ${
+                    voiceOn ? 'text-copper' : 'text-stone'
                   }`}
                 >
                   {voiceOn ? <FiVolume2 size={17} /> : <FiVolumeX size={17} />}
@@ -212,7 +206,7 @@ export default function ChatWidget() {
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close chat"
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone transition-colors hover:bg-peach/10 hover:text-peach"
                 >
                   <FiX size={18} />
                 </button>
@@ -220,18 +214,16 @@ export default function ChatWidget() {
             </div>
 
             {/* Messages */}
-            <div ref={listRef} className="chat-scroll flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={listRef} className="chat-scroll flex-1 space-y-3.5 overflow-y-auto p-[18px]">
               {messages.map((m, i) => (
                 <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {m.role === 'bot' && <BotAvatar />}
                   <div
                     className={`max-w-[78%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                      m.role === 'user' ? 'text-white rounded-2xl rounded-br-md' : 'text-gray-200 rounded-2xl rounded-bl-md'
+                      m.role === 'user'
+                        ? 'rounded-[14px] rounded-tr-[4px] border border-copper/35 bg-copper/[0.14] text-cream'
+                        : 'rounded-[14px] rounded-tl-[4px] border border-cream/10 bg-cream/5 text-cream'
                     }`}
-                    style={{
-                      background: m.role === 'user' ? '#2563EB' : 'rgba(255,255,255,0.06)',
-                      border: m.role === 'bot' ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                    }}
                   >
                     {m.role === 'bot' ? (
                       <div className="chat-md">
@@ -247,9 +239,9 @@ export default function ChatWidget() {
               {loading && (
                 <div className="flex items-end gap-2 justify-start">
                   <BotAvatar />
-                  <div className="px-3.5 py-3 rounded-2xl rounded-bl-md flex gap-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="flex gap-1 rounded-[14px] rounded-tl-[4px] border border-cream/10 bg-cream/5 px-3.5 py-3">
                     {[0, 1, 2].map((d) => (
-                      <motion.span key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }} />
+                      <motion.span key={d} className="h-1.5 w-1.5 rounded-full bg-stone" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }} />
                     ))}
                   </div>
                 </div>
@@ -261,8 +253,7 @@ export default function ChatWidget() {
                     <button
                       key={s}
                       onClick={() => send(s)}
-                      className="text-xs px-3 py-1.5 rounded-full border text-blue-300 transition-colors hover:bg-blue-500/15"
-                      style={{ borderColor: 'rgba(59,130,246,0.35)', background: 'rgba(59,130,246,0.08)' }}
+                      className="rounded-full border border-cream/20 px-3.5 py-[7px] text-[13px] text-cream-2 transition-colors hover:border-peach/60 hover:bg-peach/[0.06] hover:text-peach"
                     >
                       {s}
                     </button>
@@ -272,10 +263,9 @@ export default function ChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="p-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <div className="flex-shrink-0 border-t border-cream/10 p-3">
               <div
-                className="flex items-end gap-2 rounded-2xl px-3 py-2"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                className="flex items-end gap-2 rounded-xl border border-cream/[0.18] px-3 py-2 transition-colors focus-within:border-copper"
               >
                 <textarea
                   ref={inputRef}
@@ -284,7 +274,7 @@ export default function ChatWidget() {
                   onKeyDown={onKeyDown}
                   rows={1}
                   placeholder={listening ? 'Listening… speak now' : 'Ask about Asfak...'}
-                  className="chat-scroll flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-500 outline-none resize-none max-h-24 py-1"
+                  className="chat-scroll max-h-24 flex-1 resize-none bg-transparent py-1 text-sm text-cream outline-none placeholder:text-[#9E978E]"
                 />
                 {SpeechRec && (
                   <button
@@ -293,7 +283,7 @@ export default function ChatWidget() {
                     aria-label="Speak"
                     title="Speak your question"
                     className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                      listening ? 'text-white bg-red-500 animate-pulse' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      listening ? 'text-white bg-red-500 animate-pulse' : 'text-stone hover:bg-peach/10 hover:text-peach'
                     }`}
                   >
                     <FiMic size={15} />
@@ -303,13 +293,12 @@ export default function ChatWidget() {
                   onClick={() => send()}
                   disabled={!input.trim() || loading}
                   aria-label="Send"
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0 transition-opacity disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[9px] bg-cream text-ink transition-colors hover:bg-peach disabled:opacity-40 disabled:hover:bg-cream"
                 >
                   <FiSend size={15} />
                 </button>
               </div>
-              <p className="text-center text-[10px] text-gray-600 mt-2">
+              <p className="mt-2 text-center text-[11px] text-[#9E978E]">
                 AI assistant · answers may occasionally be inaccurate
               </p>
             </div>

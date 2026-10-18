@@ -21,7 +21,7 @@ export const workExperience = [
     id: 2,
     role: 'Software Engineer',
     company: 'Trickcel',
-    location: 'Remote',
+    location: '',
     period: 'Oct 2024 — Dec 2025',
     type: 'Full-time',
     description:
@@ -162,6 +162,7 @@ export const cpExperience = [
 export const cpStats = {
   totalProblems: 3600,
   totalContests: 500,
-  onsiteContests: 5,
+  onsiteContests: 6,
+  platforms: 10,
   favoriteTopics: ['Graph Theory', 'Trees', 'Dynamic Programming', 'Binary Search', 'Data Structures', 'Greedy'],
 };

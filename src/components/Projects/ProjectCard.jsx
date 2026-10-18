@@ -1,181 +1,145 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiGithub, FiExternalLink } from 'react-icons/fi';
-import Badge from '../ui/Badge';
+import { reveal } from '../ui/reveal';
 import ProjectDetailsModal from './ProjectDetailsModal';
 
-// Category tag → badge color
-export const tagColor = {
-  'ML / Research': 'green',
-  'ML / Data Analysis': 'green',
-  'Full Stack': 'blue',
-  'AI / Web': 'green',
-  'Production': 'green',
-  'Web App': 'blue',
-};
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
+const pad2 = (n) => String(n).padStart(2, '0');
+const host = (url) => new URL(url).host.replace(/^www\./, '');
 
-export function FeaturedProjectCard({ project, index }) {
-  const isEven = index % 2 === 0;
-
+function Features({ items, small }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: index * 0.15 }}
-      className={`grid lg:grid-cols-2 gap-6 lg:gap-10 items-center ${!isEven ? 'lg:direction-rtl' : ''}`}
-    >
-      {/* Image */}
-      <div className={`relative group overflow-hidden rounded-2xl border border-border ${!isEven ? 'lg:order-2' : ''}`}>
-        <div className="aspect-video overflow-hidden">
-          <img
-            src={project.image}
-            alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        </div>
-        {/* Overlay links */}
-        <div className="absolute inset-0 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          {project.github && (
-            <a href={project.github} target="_blank" rel="noopener noreferrer"
-              className="p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all">
-              <FiGithub size={18} />
-            </a>
-          )}
-          {project.live && (
-            <a href={project.live} target="_blank" rel="noopener noreferrer"
-              className="p-3 rounded-full bg-blue-500/80 backdrop-blur-sm text-white hover:bg-blue-500 transition-all">
-              <FiExternalLink size={18} />
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className={`space-y-4 ${!isEven ? 'lg:order-1' : ''}`}>
-        <div className="flex items-center gap-2">
-          <Badge color={project.color === 'blue' ? 'blue' : 'red'} size="md">{project.tag}</Badge>
-          <span className="text-gray-400 text-sm font-mono">Featured Project</span>
-        </div>
-
-        <h3 className="text-white text-2xl md:text-3xl font-bold leading-tight">{project.title}</h3>
-
-        <div
-          className="p-5 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+    <ul>
+      {items.slice(0, 3).map((f) => (
+        <li
+          key={f}
+          className={`relative pl-6 leading-[1.65] text-cream-2 before:absolute before:left-0 before:h-px before:w-3 before:bg-copper before:content-[''] ${
+            small ? 'py-1 text-sm before:top-[15px]' : 'py-[7px] text-[15px] before:top-[19px]'
+          }`}
         >
-          <p className="text-gray-300 text-base leading-relaxed">{project.longDescription}</p>
-        </div>
-
-        {/* Features */}
-        <ul className="space-y-2">
-          {project.features.slice(0, 4).map((f) => (
-            <li key={f} className="text-gray-300 text-base flex items-start gap-2.5">
-              <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${project.color === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`} />
-              {f}
-            </li>
-          ))}
-        </ul>
-
-        {/* Tech */}
-        <div className="flex flex-wrap gap-2">
-          {project.tech.map((t) => (
-            <Badge key={t} color="gray" size="sm">{t}</Badge>
-          ))}
-        </div>
-
-        {/* Links */}
-        <div className="flex gap-4 pt-1">
-          {project.github && (
-            <a href={project.github} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-gray-300 hover:text-white text-base font-semibold transition-colors">
-              <FiGithub size={17} /> Code
-            </a>
-          )}
-          {project.live && (
-            <a href={project.live} target="_blank" rel="noopener noreferrer"
-              className={`flex items-center gap-2 text-base font-semibold transition-colors ${
-                project.color === 'blue' ? 'text-blue-400 hover:text-blue-300' : 'text-red-400 hover:text-red-300'
-              }`}>
-              <FiExternalLink size={17} /> Live Demo
-            </a>
-          )}
-        </div>
-      </div>
-    </motion.div>
+          {f}
+        </li>
+      ))}
+    </ul>
   );
 }
 
-export function SmallProjectCard({ project }) {
+function Chips({ items }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((t) => (
+        <span key={t} className="rounded-full border border-cream/[0.16] px-[11px] py-[5px] text-[12.5px] text-cream-2">
+          {t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Links({ project, onDetails }) {
+  const link = 'border-b border-cream/40 pb-[3px] transition-colors hover:border-cream hover:text-peach';
+  return (
+    <div className="flex flex-wrap items-center gap-[22px] text-sm">
+      {project.live && (
+        <a href={project.live} target="_blank" rel="noopener noreferrer" className={link}>
+          Live Site <span className="text-copper">↗</span>
+        </a>
+      )}
+      {project.github && (
+        <a href={project.github} target="_blank" rel="noopener noreferrer" className={link}>
+          Code <span className="text-copper">↗</span>
+        </a>
+      )}
+      <button type="button" onClick={onDetails} className="text-stone transition-colors hover:text-peach">
+        Details →
+      </button>
+    </div>
+  );
+}
+
+// Large card for production projects: small browser-frame screenshot on top
+export function FeaturedCard({ project, number }) {
   const [open, setOpen] = useState(false);
   return (
-    <>
-    <motion.div
-      role="button"
-      tabIndex={0}
-      aria-label={`View details for ${project.title}`}
-      onClick={() => setOpen(true)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setOpen(true);
-        }
-      }}
-      className="h-full rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden hover:border-blue-500/30 focus:border-blue-500/50 focus:outline-none group cursor-pointer"
-      style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
-    >
-      {project.image && (
-        <div className="aspect-video w-full overflow-hidden">
+    <motion.article {...reveal((number - 1) % 2)}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`View details for ${project.title}`}
+        className="group block w-full overflow-hidden rounded-lg border border-cream/10 bg-[#0b0a09] text-left"
+      >
+        <span className="flex items-center gap-1.5 border-b border-cream/10 px-3.5 py-2.5">
+          <i className="h-[7px] w-[7px] rounded-full bg-cream/20" />
+          <i className="h-[7px] w-[7px] rounded-full bg-cream/20" />
+          <i className="h-[7px] w-[7px] rounded-full bg-cream/20" />
+          {project.live && <span className="ml-2.5 font-mono text-[11px] text-[#9E978E]">{host(project.live)}</span>}
+        </span>
+        {project.image && (
           <img
             src={project.image}
             alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="block h-[clamp(150px,11vw,200px)] w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
           />
-        </div>
-      )}
+        )}
+      </button>
 
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-start justify-between mb-4">
-          {project.tag && <Badge color={tagColor[project.tag] || 'gray'} size="sm">{project.tag}</Badge>}
-          <div className="flex gap-2">
-            {project.github && (
-              <a href={project.github} target="_blank" rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-gray-500 hover:text-gray-200 transition-colors">
-                <FiGithub size={17} />
-              </a>
-            )}
-            {project.live && (
-              <a href={project.live} target="_blank" rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-gray-500 hover:text-blue-400 transition-colors">
-                <FiExternalLink size={17} />
-              </a>
-            )}
-          </div>
-        </div>
+      <p className="mt-[22px] flex gap-4">
+        <span className={`${mono} !text-copper`}>{pad2(number)}</span>
+        <span className={`${mono} !text-sand`}>{project.tag}</span>
+      </p>
+      <h3 className="mt-2.5 font-serif text-[28px] leading-[1.05] tracking-[-0.02em] lg:text-[clamp(28px,2.6vw,42px)]">
+        {project.title}
+      </h3>
+      <div className="mt-3.5">
+        <Features items={project.features || []} />
+      </div>
+      <div className="mt-4">
+        <Chips items={project.tech} />
+      </div>
+      <div className="mt-[22px]">
+        <Links project={project} onDetails={() => setOpen(true)} />
+      </div>
 
-        <h4 className="text-white font-bold text-base mb-3 leading-snug transition-colors duration-300 group-hover:text-blue-400">{project.title}</h4>
+      {open && <ProjectDetailsModal project={project} onClose={() => setOpen(false)} />}
+    </motion.article>
+  );
+}
 
-        <ul className="space-y-2 flex-1 mb-4">
-          {(project.features || []).slice(0, 3).map((f) => (
-            <li key={f} className="text-gray-300 text-sm flex items-start gap-2 leading-snug">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-500" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="flex flex-wrap gap-1.5 mt-auto">
-          {project.tech.map((t) => (
-            <Badge key={t} color="gray" size="sm">{t}</Badge>
-          ))}
+// Compact list row: number · title + tag + links · features + tech · thumbnail
+export function ProjectRow({ project, number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.article {...reveal()} className="grid grid-cols-1 items-start gap-3.5 border-b border-cream/10 py-8 lg:grid-cols-[60px_1.3fr_1.1fr_200px] lg:gap-7">
+      <span className={`${mono} !text-copper lg:pt-2.5`}>{pad2(number)}</span>
+      <div>
+        <h3 className="font-serif text-[26px] leading-[1.08] tracking-[-0.015em] lg:text-[clamp(26px,2.4vw,38px)]">{project.title}</h3>
+        <span className={`${mono} mt-2 block !text-sand`}>{project.tag}</span>
+        <div className="mt-4">
+          <Links project={project} onDetails={() => setOpen(true)} />
         </div>
       </div>
-    </motion.div>
+      <div>
+        <Features items={project.features || []} small />
+        <div className="mt-3">
+          <Chips items={project.tech} />
+        </div>
+      </div>
+      {project.image && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`View details for ${project.title}`}
+          className="group -order-1 block overflow-hidden rounded-md border border-cream/10 lg:order-none"
+        >
+          <img
+            src={project.image}
+            alt=""
+            className="block aspect-[16/10] w-full object-cover object-top grayscale-[.3] brightness-[.85] transition duration-300 group-hover:grayscale-0 group-hover:brightness-100"
+          />
+        </button>
+      )}
 
-    {open && <ProjectDetailsModal project={project} onClose={() => setOpen(false)} />}
-    </>
+      {open && <ProjectDetailsModal project={project} onClose={() => setOpen(false)} />}
+    </motion.article>
   );
 }

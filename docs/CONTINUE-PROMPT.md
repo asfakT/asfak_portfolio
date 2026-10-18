@@ -27,7 +27,7 @@ You are my **senior UI/UX + full-stack + AI-application engineer**, helping me i
 - **Color palette: BLUE (#3B82F6) + GREEN/emerald (#10B981) only.** No red/amber/purple/rainbow.
 - **Avoid AI-written tells:** no em dashes (—) in copy; write human, simple sentences; no emoji-as-icons (use react-icons/Feather).
 - Keep it **simple, clean, professional, recruiter-friendly**; reduce repetition.
-- Dark theme. Background is subtle (grid + grain + hero particle network) — don't overdo animation.
+- Dark editorial theme (ink/cream/sand/copper/peach, Instrument Serif + DM Sans). Keep animation subtle. See the "Current design" section in CLAUDE.md.
 
 Confirm you understand, then ask me what I want to work on.
 
@@ -36,5 +36,6 @@ Confirm you understand, then ask me what I want to work on.
 ## Quick state notes (for me)
 - Live site: Vercel project `protfolio` (subdomain `asfakshahrier.vercel.app`). Custom domain `asfakshahrier.com` needs DNS A record `216.198.79.1` to work.
 - Chatbot model is `llama-3.1-8b-instant` (more free quota); switch to `llama-3.3-70b-versatile` for better quality/Bangla.
-- Pending ideas: "View Details" modal for Projects + Certificates; reconcile 3200+ vs 3600+ problem count; light/dark theme toggle (deferred); real project screenshots.
+- Done since: View Details modal, 3600+ count everywhere, editorial redesign (warm palette, serif headings), social rail, scroll button, chat restyle, nav underline.
+- Pending ideas: light/dark theme toggle (deferred); real project screenshots; submit paper 2 and update its status/venue.
 - Remember to `vercel --prod` to push local changes live.

@@ -1,252 +1,192 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiBriefcase, FiCode, FiExternalLink, FiBookOpen, FiCheckCircle, FiClock, FiAward, FiMapPin, FiGlobe } from 'react-icons/fi';
-import { SiCodeforces, SiLeetcode, SiCodechef, SiHackerrank } from 'react-icons/si';
-import SectionWrapper from '../ui/SectionWrapper';
-import SectionTitle from '../ui/SectionTitle';
-import Badge from '../ui/Badge';
+import EditorialSection from '../ui/EditorialSection';
+import SectionHeader from '../ui/SectionHeader';
 import { workExperience, trainingExperience, cpExperience, cpStats } from '../../data/experience';
 
 const tabs = [
-  { id: 'work', label: 'Work Experience', icon: FiBriefcase },
-  { id: 'training', label: 'Training Program', icon: FiBookOpen },
-  { id: 'cp', label: 'Competitive Programming', icon: FiCode },
+  { id: 'work', label: 'Work Experience' },
+  { id: 'training', label: 'Training Program' },
+  { id: 'cp', label: 'Competitive Programming' },
 ];
 
-// Real brand logos by platform (AtCoder has none → falls back to text icon)
-const platformLogo = {
-  Codeforces: SiCodeforces,
-  LeetCode: SiLeetcode,
-  CodeChef: SiCodechef,
-  HackerRank: SiHackerrank,
-};
+// Small uppercase mono label
+const mono = 'font-mono text-xs uppercase tracking-[1.5px] text-stone';
+const pad2 = (n) => String(n).padStart(2, '0');
 
-function WorkCard({ exp, index }) {
+function Chips({ items }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="relative group"
-    >
-      <div className="flex gap-4">
-        {/* Timeline */}
-        <div className="hidden sm:flex flex-col items-center">
-          <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-1.5 ${exp.color === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`} />
-          <div className="flex-1 w-px bg-border mt-2" />
-        </div>
+    <div className="mt-5 flex flex-wrap gap-2">
+      {items.map((t) => (
+        <span key={t} className="rounded-full border border-cream/[0.16] px-3 py-1.5 text-[13px] text-cream-2">
+          {t}
+        </span>
+      ))}
+    </div>
+  );
+}
 
-        <div className="flex-1 pb-8">
-          <div
-            className="p-6 rounded-2xl border transition-all duration-300 group-hover:border-blue-500/25"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
-          >
-            {/* Header */}
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-              <div>
-                <h3 className="text-white font-bold text-lg">{exp.role}</h3>
-                <p className="text-base mt-1 flex items-center gap-1.5">
-                  <span className={exp.color === 'blue' ? 'text-blue-400 font-semibold' : 'text-red-400 font-semibold'}>{exp.company}</span>
-                  <span className="text-gray-600">·</span>
-                  <span className="text-gray-400">{exp.location}</span>
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <Badge color={exp.color === 'blue' ? 'blue' : 'red'} size="sm">{exp.period}</Badge>
-                <Badge color="gray" size="sm">{exp.type}</Badge>
-              </div>
-            </div>
+// One accordion row, used for both work and training entries
+function Entry({ title, org, period, facts, description, items, tech, link, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
 
-            <p className="text-gray-300 text-base leading-relaxed mb-4">{exp.description}</p>
+  return (
+    <div className="border-t border-cream/10 last:border-b">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={bodyId}
+        className="group grid w-full grid-cols-[1fr_24px] items-baseline gap-x-6 gap-y-2 py-7 text-left lg:grid-cols-[1fr_auto_28px]"
+      >
+        <span className="col-start-1 row-start-1 min-w-0">
+          <span className="block font-serif text-[28px] leading-[1.08] tracking-[-0.015em] text-cream transition-colors group-hover:text-peach lg:text-[clamp(28px,2.6vw,42px)]">
+            {title}
+          </span>
+          <span className="mt-1.5 block font-serif text-lg italic text-sand lg:text-[clamp(18px,1.5vw,22px)]">{org}</span>
+        </span>
+        <span className={`${mono} col-start-1 row-start-2 whitespace-nowrap !text-sand lg:col-start-2 lg:row-start-1`}>
+          {period}
+        </span>
+        <span
+          aria-hidden="true"
+          className={`col-start-2 row-start-1 justify-self-end text-[22px] leading-none text-copper transition-transform duration-300 lg:col-start-3 ${
+            open ? 'rotate-180' : ''
+          }`}
+        >
+          {open ? '−' : '+'}
+        </span>
+      </button>
 
-            {/* Responsibilities */}
-            <ul className="space-y-2.5 mb-4">
-              {exp.responsibilities.map((r) => (
-                <li key={r} className="text-gray-300 text-base flex gap-2.5">
-                  <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${exp.color === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`} />
+      <div
+        id={bodyId}
+        aria-hidden={!open}
+        inert={!open}
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="pb-9">
+            <p className={`${mono} flex flex-wrap gap-x-[22px] gap-y-2`}>
+              {facts.filter((f) => f?.text).map((f) => (
+                <span key={f.text} className={f.ok ? '!text-copper' : ''}>
+                  {f.ok && <span aria-hidden="true">✓ </span>}
+                  {f.text}
+                </span>
+              ))}
+            </p>
+            <p className="mt-5 max-w-[68ch] text-lg leading-[1.65] text-cream">{description}</p>
+            <ul className="mt-[18px] max-w-[76ch]">
+              {items.map((r) => (
+                <li
+                  key={r}
+                  className="relative py-2.5 pl-[26px] text-[15.5px] leading-[1.7] text-cream-2 before:absolute before:left-0 before:top-[22px] before:h-px before:w-3 before:bg-copper before:content-['']"
+                >
                   {r}
                 </li>
               ))}
             </ul>
-
-            {/* Tech stack */}
-            <div className="flex flex-wrap gap-1.5">
-              {exp.tech.map((t) => (
-                <Badge key={t} color="gray" size="xs">{t}</Badge>
-              ))}
-            </div>
+            <Chips items={tech} />
+            {link && (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-[22px] inline-block border-b border-cream pb-[3px] text-sm transition-colors hover:text-peach"
+              >
+                View Certificate <span className="text-copper">↗</span>
+              </a>
+            )}
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function TrainingCard({ item, index }) {
-  const isGreen = item.color === 'green';
-  const accent = isGreen ? '#10B981' : '#3B82F6';
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.12 }}
-      className="relative overflow-hidden rounded-2xl border transition-all duration-300 group"
-      style={{
-        background: `linear-gradient(135deg, ${accent}0d 0%, transparent 60%)`,
-        borderColor: `${accent}33`,
-      }}
-    >
-      {/* Left accent bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-        style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}88)` }}
-      />
-
-      <div className="p-6 pl-7">
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="text-white font-bold text-lg">{item.title}</h3>
-              {item.verified && (
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
-                  style={{ background: `${accent}1a`, color: accent, borderColor: `${accent}40` }}
-                >
-                  <FiCheckCircle size={10} /> Verified
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-medium" style={{ color: accent }}>{item.organization}</p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <Badge color={isGreen ? 'green' : 'blue'} size="sm">{item.period}</Badge>
-            <Badge color="gray" size="sm">{item.type}</Badge>
-          </div>
-        </div>
-
-        {item.hours && (
-          <p className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
-            <FiClock size={11} style={{ color: accent }} /> {item.hours}
-            {item.serial && <span className="text-gray-700 font-mono ml-2">· Serial: {item.serial}</span>}
-          </p>
-        )}
-
-        <p className="text-gray-300 text-base leading-relaxed mb-4">{item.description}</p>
-
-        <ul className="space-y-2 mb-4">
-          {item.highlights.map((h) => (
-            <li key={h} className="text-gray-300 text-sm flex gap-2.5">
-              <span className="mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
-              {h}
-            </li>
-          ))}
-        </ul>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-1.5">
-            {item.tech.map((t) => (
-              <Badge key={t} color="gray" size="xs">{t}</Badge>
-            ))}
-          </div>
-          {item.url && (
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:scale-105 flex-shrink-0"
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 0 16px ${accent}40` }}
-            >
-              View Certificate <FiExternalLink size={13} />
-            </a>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function CPPlatformCard({ platform, index }) {
+function CpCard({ platform }) {
   const single = platform.rating == null && platform.contests == null;
-  const Logo = platformLogo[platform.platform];
+  // Same three slots on every card; missing values show a muted dash
+  const cells = [
+    { value: platform.rating, label: platform.maxRating != null ? `Rating · max ${platform.maxRating}` : 'Rating', empty: single },
+    { value: `${platform.problems}+`, label: single ? 'Problems Solved' : 'Solved' },
+    { value: `${platform.contests}+`, label: 'Contests', empty: single },
+  ];
+
   return (
-    <motion.a
+    <a
       href={platform.url}
       target="_blank"
       rel="noopener noreferrer"
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="flex flex-col p-6 rounded-2xl border transition-all duration-300 group hover:border-white/20"
-      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
+      className="group flex flex-col rounded-md border border-cream/10 p-6 transition-colors hover:border-cream/25"
     >
-      {/* Header: logo + name + view-profile link */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-base font-extrabold flex-shrink-0"
-            style={{ backgroundColor: platform.color + '28', border: `1.5px solid ${platform.color}55` }}
-          >
-            {Logo ? <Logo size={24} style={{ color: platform.color }} /> : <span style={{ color: platform.color }}>{platform.icon}</span>}
-          </div>
-          <div className="min-w-0">
-            <p className="text-white font-bold text-base truncate">{platform.platform}</p>
-            <p className="text-gray-400 text-sm font-mono truncate">@{platform.handle}</p>
-          </div>
-        </div>
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 group-hover:text-white transition-colors whitespace-nowrap flex-shrink-0">
-          View Profile <FiExternalLink size={12} />
-        </span>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-serif text-[28px] tracking-[-0.01em] transition-colors group-hover:text-peach">{platform.platform}</p>
+        <p className={`${mono} text-right !text-sand`}>{platform.rank}</p>
       </div>
+      <p className="mt-0.5 font-mono text-xs text-[#9E978E]">@{platform.handle}</p>
 
-      {/* Rank — compact pill, hugs content */}
-      <span
-        className="inline-flex self-start px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-4"
-        style={{ backgroundColor: platform.color + '20', color: platform.color, border: `1px solid ${platform.color}35` }}
-      >
-        {platform.rank}
-      </span>
-
-      {/* Flat stat row — dividers only, no inner box */}
-      <div className="flex text-center py-4 border-y mb-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-        {single ? (
-          <div className="flex-1">
-            <p className="font-extrabold text-2xl" style={{ color: platform.color }}>{platform.problems}+</p>
-            <p className="text-gray-400 text-xs mt-1 font-medium">Problems Solved</p>
+      <div className="mt-5 grid grid-cols-3 border-y border-cream/10">
+        {cells.map((c, i) => (
+          <div key={c.label} className={`py-3.5 ${i > 0 ? 'border-l border-cream/10 pl-3.5' : ''}`}>
+            <p className={`font-serif text-[30px] leading-none ${c.empty ? 'text-[#9E978E]' : ''}`}>{c.empty ? '–' : c.value}</p>
+            <p className="mt-1.5 text-[11px] text-[#9E978E]">{c.label}</p>
           </div>
-        ) : (
-          <>
-            <div className="flex-1">
-              <p className="font-extrabold text-xl" style={{ color: platform.color }}>{platform.rating}</p>
-              <p className="text-gray-400 text-xs mt-1 font-medium">
-                {platform.maxRating != null ? `Rating · max ${platform.maxRating}` : 'Rating'}
-              </p>
-            </div>
-            <div className="flex-1 border-x" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              <p className="text-white font-extrabold text-xl">{platform.problems}+</p>
-              <p className="text-gray-400 text-xs mt-1 font-medium">Solved</p>
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-extrabold text-xl">{platform.contests}+</p>
-              <p className="text-gray-400 text-xs mt-1 font-medium">Contests</p>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Highlights */}
-      <ul className="space-y-2">
-        {platform.highlights.map((h) => (
-          <li key={h} className="text-gray-300 text-sm flex items-start gap-2">
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: platform.color }} />
-            {h}
-          </li>
         ))}
-      </ul>
-    </motion.a>
+      </div>
+
+      <div className="mt-4 flex-1 text-sm leading-[1.7] text-cream-2">
+        {platform.highlights.map((h) => (
+          <p key={h}>{h}</p>
+        ))}
+      </div>
+      <p className="mt-4 text-[13px] text-stone">
+        View Profile <span className="text-copper">↗</span>
+      </p>
+    </a>
+  );
+}
+
+function CpPanel() {
+  const stats = [
+    { value: cpStats.totalProblems, label: 'Total Problems' },
+    { value: cpStats.totalContests, label: 'Total Contests' },
+    { value: cpStats.onsiteContests, label: 'Onsite Contests' },
+    { value: cpStats.platforms, label: 'Platforms' },
+  ];
+
+  return (
+    <>
+      <div className="grid grid-cols-2 border-y border-cream/10 lg:grid-cols-4">
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            className={`py-5 lg:py-7 ${i % 2 ? 'border-l border-cream/10 pl-3.5' : ''} ${
+              i >= 2 ? 'border-t border-cream/10 lg:border-t-0' : ''
+            } ${i === 2 ? 'lg:border-l lg:pl-[22px]' : ''} ${i % 2 ? 'lg:pl-[22px]' : ''}`}
+          >
+            <p className="font-serif text-4xl leading-none tracking-[-0.02em] lg:text-[clamp(36px,3.4vw,54px)]">
+              {s.value}
+              <span className="text-copper">+</span>
+            </p>
+            <p className="mt-2.5 text-sm text-stone">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+        {cpExperience.map((p) => (
+          <CpCard key={p.platform} platform={p} />
+        ))}
+      </div>
+
+      <div className="mt-10">
+        <p className={mono}>Favorite Problem Categories</p>
+        <Chips items={cpStats.favoriteTopics} />
+      </div>
+    </>
   );
 }
 
@@ -262,116 +202,89 @@ export default function Experience() {
   }, []);
 
   return (
-    <SectionWrapper id="experience">
-      <SectionTitle
-        label="/ experience"
-        title="Where I've Been"
+    <EditorialSection id="experience">
+      <SectionHeader
+        number="03"
+        label="experience"
+        title="Where"
+        titleEm="I've Been"
         subtitle="Professional journey spanning industry and competitive programming."
       />
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-1 p-1 rounded-xl w-full sm:w-fit mb-10 border" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}>
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`relative flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
-              activeTab === id ? 'text-white' : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            {activeTab === id && (
-              <motion.div
-                layoutId="tab-bg"
-                className="absolute inset-0 bg-blue-500/20 border border-blue-500/30 rounded-lg"
-              />
-            )}
-            <Icon size={14} className="relative z-10" />
-            <span className="relative z-10">{label}</span>
-          </button>
-        ))}
-      </div>
+      <div className="mt-11 grid grid-cols-1 items-start gap-9 lg:mt-20 lg:grid-cols-[minmax(240px,1fr)_2.4fr] lg:gap-[6vw]">
+        {/* Sticky index = tabs */}
+        <div role="tablist" aria-label="Experience categories" className="border-t border-cream/10 lg:sticky lg:top-[110px]">
+          {tabs.map(({ id, label }, i) => {
+            const selected = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveTab(id)}
+                className={`flex w-full items-baseline justify-between border-b border-cream/10 py-5 text-left transition-colors ${
+                  selected ? 'text-cream' : 'text-[#9E978E] hover:text-peach'
+                }`}
+              >
+                <span className={`font-serif text-2xl tracking-[-0.01em] lg:text-[clamp(24px,2vw,32px)] ${selected ? 'italic' : ''}`}>
+                  {label}
+                </span>
+                <span className={`font-mono text-xs tracking-[1.5px] ${selected ? 'text-copper' : ''}`}>{pad2(i + 1)}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      <AnimatePresence mode="wait">
-        {activeTab === 'work' && (
+        <AnimatePresence mode="wait">
           <motion.div
-            key="work"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-0"
+            key={activeTab}
+            role="tabpanel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
           >
-            {workExperience.map((exp, i) => (
-              <WorkCard key={exp.id} exp={exp} index={i} />
-            ))}
-          </motion.div>
-        )}
-
-        {activeTab === 'training' && (
-          <motion.div
-            key="training"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            {trainingExperience.map((item, i) => (
-              <TrainingCard key={item.id} item={item} index={i} />
-            ))}
-          </motion.div>
-        )}
-
-        {activeTab === 'cp' && (
-          <motion.div
-            key="cp"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-
-            {/* Total stats banner */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-              {[
-                { label: 'Total Problems', value: cpStats.totalProblems + '+', color: 'blue', icon: FiCheckCircle },
-                { label: 'Total Contests', value: cpStats.totalContests + '+', color: 'green', icon: FiAward },
-                { label: 'Onsite Contests', value: cpStats.onsiteContests + '+', color: 'blue', icon: FiMapPin },
-                { label: 'Platforms', value: cpExperience.length + '+', color: 'green', icon: FiGlobe },
-              ].map((s) => {
-                const isBlue = s.color === 'blue';
-                const box = isBlue ? 'bg-blue-500/10 border-blue-500/25' : 'bg-emerald-500/10 border-emerald-500/25';
-                const accent = isBlue ? 'text-blue-400' : 'text-emerald-400';
-                const Icon = s.icon;
-                return (
-                  <div key={s.label} className={`p-5 rounded-2xl border text-center ${box}`}>
-                    <Icon className={`mx-auto mb-2 ${accent}`} size={20} />
-                    <p className={`text-3xl font-extrabold ${accent}`}>{s.value}</p>
-                    <p className="text-gray-300 text-sm font-medium mt-1.5">{s.label}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Platform cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-              {cpExperience.map((p, i) => (
-                <CPPlatformCard key={p.platform} platform={p} index={i} />
+            {activeTab === 'work' &&
+              workExperience.map((exp, i) => (
+                <Entry
+                  key={exp.id}
+                  title={exp.role}
+                  org={exp.company}
+                  period={exp.period}
+                  facts={[{ text: exp.type }, { text: exp.location }]}
+                  description={exp.description}
+                  items={exp.responsibilities}
+                  tech={exp.tech}
+                  defaultOpen={i === 0}
+                />
               ))}
-            </div>
 
-            {/* Favorite topics */}
-            <div className="p-6 rounded-2xl border" style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}>
-              <p className="text-gray-200 text-base font-semibold mb-3">Favorite Problem Categories</p>
-              <div className="flex flex-wrap gap-2">
-                {cpStats.favoriteTopics.map((t) => (
-                  <Badge key={t} color="blue" size="sm">{t}</Badge>
-                ))}
-              </div>
-            </div>
+            {activeTab === 'training' &&
+              trainingExperience.map((item, i) => (
+                <Entry
+                  key={item.id}
+                  title={item.title}
+                  org={item.organization}
+                  period={item.period}
+                  facts={[
+                    { text: item.type },
+                    item.verified && { text: 'Verified', ok: true },
+                    item.hours && { text: item.hours },
+                    item.serial && { text: `Serial: ${item.serial}` },
+                  ]}
+                  description={item.description}
+                  items={item.highlights}
+                  tech={item.tech}
+                  link={item.url}
+                  defaultOpen={i === 0}
+                />
+              ))}
+
+            {activeTab === 'cp' && <CpPanel />}
           </motion.div>
-        )}
-      </AnimatePresence>
-    </SectionWrapper>
+        </AnimatePresence>
+      </div>
+    </EditorialSection>
   );
 }

@@ -19,7 +19,7 @@ Medium (blog): medium.com/@shahrierasfak27
 === SUMMARY ===
 Software engineer with hands-on experience building production web apps using Laravel, Angular,
 React and Django, and integrating AI through the OpenAI and Gemini APIs. Strong competitive-
-programming background (3600+ problems across 6 platforms). Two ML research papers (one published, one under review). Currently
+programming background (3600+ problems across 10 platforms). Two ML research papers (one published, one completed manuscript). Currently
 focused on applied AI, building AI-powered software, and learning system design.
 
 === WORK EXPERIENCE ===
@@ -33,7 +33,7 @@ focused on applied AI, building AI-powered software, and learning system design.
   awarded) to templates with queued sending and logging. Added PDF generation (certificates,
   invoices, reports), real-time notifications (Pusher/Echo), and a drag-and-drop certificate
   builder. Live: altrainer.com.
-- Software Engineer — Trickcel (Remote, Full-time, Oct 2024 – Dec 2025).
+- Software Engineer — Trickcel (Full-time, Oct 2024 – Dec 2025).
   Started as a Software Engineering Intern (Oct–Dec 2024); promoted to full-time Software Engineer
   in Jan 2025. Built the complete frontend of a production e-commerce dealership platform using
   Angular 17 and Tailwind CSS (serving real users), with server-side rendering (SSR) and
@@ -42,7 +42,7 @@ focused on applied AI, building AI-powered software, and learning system design.
   error handling. Delivered a responsive, multi-language, theme-switchable UI with unit/integration
   testing. Live: thibstrailers.com.
 
-=== COMPETITIVE PROGRAMMING (3600+ problems, 500+ contests, 6 platforms, 5+ onsite contests) ===
+=== COMPETITIVE PROGRAMMING (3600+ problems, 500+ contests, 10 platforms, 6+ onsite contests) ===
 - Codeforces (handle Asfak_Shahrier): Specialist, rating 1462, ~1700 problems, ~155 contests, top 20% globally. Strong in graphs & DP.
 - LeetCode (handle AsfakShahrier): Knight, rating 1854, ~620 problems, ~67 contests, top 6% globally.
 - CodeChef (handle asfakcse027): 4-star, rating 1812, ~500 problems, ~87 contests. Country Rank #1 in Bangladesh at Starters June 2021 (Division 3).
@@ -51,7 +51,7 @@ focused on applied AI, building AI-powered software, and learning system design.
 - CSES (user 64386): 100+ problems solved, 100% C++ submissions.
 - Onsite/team contests: UGV South Zone Programming Contest (3rd place, team); GSTU Intra University Programming Contest 2023 (4th, team); KU CSE Fest 2022 Programming Contest (4th, team).
 - Favorite topics: Graph Theory, Trees, Dynamic Programming, Binary Search, Data Structures, Greedy.
-- Number of onsite contests attended: 5.
+- Number of onsite contests attended: 6.
 
 === RESEARCH PAPERS (first-authored) ===
 1. "Understanding Link Sharing Practice in NPM Related Tweets by Package Maintainers Community"
@@ -59,7 +59,7 @@ focused on applied AI, building AI-powered software, and learning system design.
    Analyzed 39,426 tweets / 18,408 unique links; 40% of tweets contain a link; GitHub is the top
    external domain; 5% link decay rate; proposed ethical link-sharing guidelines. Tools: Python, NLTK, Pandas, mixed-methods.
 2. "Predicting CSE Undergraduate Students' Careers Using Machine Learning Algorithms in the Context of Bangladesh"
-   — Status: Under Review, IEEE Conference. Supervised by Dr. Saleh Ahmed (GSTU).
+   — Status: Manuscript completed in 2026; not yet submitted to a venue. Supervised by Dr. Saleh Ahmed (GSTU).
    First multi-label career-prediction framework; 468 students across 47 universities; 24 features;
    benchmarked 10 ML classifiers; XGBoost best (accuracy 61.70%, Recall 0.737, F1 Micro 0.792, Hamming Loss 0.060).
    GitHub: github.com/asfakT/ml-data-analysis-collection

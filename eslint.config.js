@@ -23,7 +23,12 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // motion.* and <Icon /> are used in JSX, which core no-unused-vars cannot see
+      'no-unused-vars': ['error', { varsIgnorePattern: '^(motion$|[A-Z_])', argsIgnorePattern: '^[A-Z_]' }],
     },
+  },
+  {
+    files: ['api/**/*.js'],
+    languageOptions: { globals: globals.node },
   },
 ])

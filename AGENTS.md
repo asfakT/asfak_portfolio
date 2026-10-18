@@ -14,6 +14,30 @@ Complete reference for AI-assisted development of Asfak Shahrier's portfolio sit
 
 ---
 
+## Current design (editorial redesign) - read this first
+
+The site was restyled to a warm editorial dark theme. Where the sections below describe the OLD blue/gradient design
+(Design System colours, SectionWrapper/SectionTitle/Button/Badge, Swiper carousel), this section wins.
+
+- **Palette** (tailwind.config.js): `ink #030303`, `cream #F1EEE8`, `cream-2 #DEDAD4`, `stone #C4BEB6`, `sand #E5CBB0`,
+  `copper #FF8C59` (accent dots/arrows), `peach #F2A67E` (hover colour for every clickable name or link).
+- **Fonts:** `font-serif` = Instrument Serif (headings), `font-dm` = DM Sans (body), `font-mono` = JetBrains Mono (small uppercase labels).
+- **Layout primitives** (`src/components/ui/`): `EditorialSection` (full-width 5vw section), `SectionHeader` (numbered label + serif title),
+  `CardSlider` (scroll-snap slider, used by Certificates and Blog), `SocialRail` (fixed left icon rail, 1180px+),
+  `ScrollButton` (down/up button above the chat), `reveal.js` (fade-up on scroll, spread onto a `motion.*` element), `Logo`.
+- **Removed:** Swiper, SectionWrapper, SectionTitle, Button, Badge, Particles, theme.js.
+- **Navbar:** active link = copper underline drawn left to right; hover = peach underline (no dots). Floating bar, dropdowns kept.
+- **Chat widget:** warm restyle in `ChatWidget.jsx` (button bottom-3 right-4, hover changes colour only). Logic untouched.
+- **Motion:** `reveal.js` fade-up on scroll, hero text slide-up, stat count-up (`HeroStats.jsx`). `MotionConfig reducedMotion="user"` in `main.jsx`.
+- **Favicon:** `public/favicon.png` + `apple-touch-icon.png` (round crop of the hero portrait). Logo = `src/assets/logo.png`.
+- **Honesty rule for papers:** never write a venue or "Under Review" until it is really submitted (paper 2 is "Manuscript Completed").
+- **Rules:** content lives in `src/data/*` and `api/chat.js`; UI changes must not change content. Clickable things hover to `text-peach`.
+  Restart the dev server after editing tailwind.config.js. `npm run lint` and `npm run build` should both pass.
+- **Facts to keep in sync** (data files, About, Hero stats and `api/chat.js`): 3600+ problems, 10 platforms, 6 onsite contests,
+  2 papers (1 published, 1 manuscript completed, no venue yet).
+
+---
+
 ## Tech Stack
 
 | Tool | Version | Purpose |
@@ -23,7 +47,6 @@ Complete reference for AI-assisted development of Asfak Shahrier's portfolio sit
 | Tailwind CSS | 3.x | Styling (utility-first) |
 | Framer Motion | 12.x | Animations (scroll reveal, hover, float) |
 | React Icons | 5.x | Icons (Fi* = Feather, Fa* = FontAwesome) |
-| Swiper | 12.x | Project carousel slider |
 | @headlessui/react | 2.x | Accessible UI primitives |
 
 ### Dev Commands
@@ -162,7 +185,7 @@ Sections alternate between two backgrounds with glowing gradient dividers:
 - Image: `src/assets/hero_image1.jpeg` — 300×300 circle
 - Rings: spinning conic-gradient outer, dashed middle, radial glow inner
 - Typewriter: cycles through `['Full Stack Engineer', 'Competitive Programmer', 'ML Researcher', 'Problem Solver']`
-- Stats bar: 4 cards at bottom (3200+ problems, 2 papers, 2 jobs, 3.13 CGPA)
+- Stats bar: 4 cards at bottom (3600+ problems, 2 papers, 2 jobs, 3.13 CGPA)
 - **To change hero image:** swap `hero_image1.jpeg` in assets + update import in Hero.jsx
 
 ### About (About.jsx)
