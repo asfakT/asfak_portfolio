@@ -20,7 +20,7 @@ export default function Lab() {
         to="/lab"
         className="mt-14 inline-flex items-center gap-2 rounded-full border border-cream/25 px-6 py-[13px] text-sm transition-colors hover:border-cream/50 hover:text-peach"
       >
-        View All ({labItems.length}) <span className="text-copper">→</span>
+        Open the Lab ({labItems.length}) <span className="text-copper">→</span>
       </Link>
     </EditorialSection>
   );

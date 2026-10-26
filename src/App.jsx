@@ -10,6 +10,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import BlogPage from './pages/BlogPage';
 import LabPage from './pages/LabPage';
+import LabArticlePage from './pages/LabArticlePage';
 
 // Reset scroll to top on route change (except when a section scroll is requested)
 function ScrollToTop() {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/certificates" element={<CertificatesPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/lab" element={<LabPage />} />
+          <Route path="/lab/:topic/:slug" element={<LabArticlePage />} />
         </Routes>
         <ScrollButton />
         <ChatWidget />

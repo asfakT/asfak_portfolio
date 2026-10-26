@@ -1,6 +1,10 @@
-// Learning Lab entries. Each page lives in public/lab/<topic-folder>/<slug>.html.
-// Newest first. To add an entry: put the HTML file in public/lab/ and add one object here.
+// Learning Lab entries. Each page lives in public/lab-pages/<topic-slug>/<id>.html.
+// Newest first. To add an entry: put the HTML file in public/lab-pages/ and add one object here.
 export const labSubtitle = 'How real apps like WhatsApp and YouTube work, explained step by step with diagrams.';
+
+// Sidebar groups, in display order. A topic with no entries yet shows "Coming soon".
+// An entry's HTML folder must match its topic slug: 'System Design' -> public/lab-pages/system-design/
+export const labTopics = ['System Design', 'Networking', 'Data Structures', 'Databases', 'DevOps', 'AI / ML'];
 
 export const labItems = [
   {
@@ -10,7 +14,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '13 min read',
-    url: '/lab/system-design/news-feed.html',
+    url: '/lab-pages/system-design/news-feed.html',
   },
   {
     id: 'ticketmaster',
@@ -19,7 +23,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '15 min read',
-    url: '/lab/system-design/ticketmaster.html',
+    url: '/lab-pages/system-design/ticketmaster.html',
   },
   {
     id: 'gopuff',
@@ -28,7 +32,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '14 min read',
-    url: '/lab/system-design/gopuff.html',
+    url: '/lab-pages/system-design/gopuff.html',
   },
   {
     id: 'dropbox',
@@ -37,7 +41,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '16 min read',
-    url: '/lab/system-design/dropbox.html',
+    url: '/lab-pages/system-design/dropbox.html',
   },
   {
     id: 'url-shortener',
@@ -46,7 +50,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '14 min read',
-    url: '/lab/system-design/url-shortener.html',
+    url: '/lab-pages/system-design/url-shortener.html',
   },
   {
     id: 'rate-limiter',
@@ -55,7 +59,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '11 min read',
-    url: '/lab/system-design/rate-limiter.html',
+    url: '/lab-pages/system-design/rate-limiter.html',
   },
   {
     id: 'leetcode',
@@ -64,7 +68,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 26, 2026',
     readTime: '10 min read',
-    url: '/lab/system-design/leetcode.html',
+    url: '/lab-pages/system-design/leetcode.html',
   },
   {
     id: 'youtube',
@@ -73,7 +77,7 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 24, 2026',
     readTime: '12 min read',
-    url: '/lab/system-design/youtube.html',
+    url: '/lab-pages/system-design/youtube.html',
   },
   {
     id: 'whatsapp',
@@ -82,6 +86,6 @@ export const labItems = [
     topic: 'System Design',
     date: 'Oct 24, 2026',
     readTime: '14 min read',
-    url: '/lab/system-design/whatsapp.html',
+    url: '/lab-pages/system-design/whatsapp.html',
   },
 ];

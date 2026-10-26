@@ -21,7 +21,7 @@ design tokens, data fields, routes or deployment, update this file in the same c
 | Tool | Purpose |
 |---|---|
 | React 19 + Vite | UI and build |
-| react-router-dom 7 | Routes: `/`, `/projects`, `/certificates`, `/blog`, `/lab` |
+| react-router-dom 7 | Routes: `/`, `/projects`, `/certificates`, `/blog`, `/lab`, `/lab/:topic/:slug` |
 | Tailwind CSS 3 (NOT v4) | Styling. Do not use v4-only syntax |
 | Framer Motion 12 | Scroll reveal, hero load-in, stat count-up |
 | react-icons 5 | Icons (Fi = Feather, Fa = Font Awesome, Si = Simple Icons) |
@@ -50,13 +50,13 @@ api/
   chat.js                   Chatbot (Groq). Holds the PROFILE text the bot answers from. Needs GROQ_API_KEY
   hello.js                  Test endpoint
 public/                     favicon.png, apple-touch-icon.png, resume.pdf, certs/, papers/, achievements/
-  lab/<topic>/<slug>.html   Learning Lab pages: standalone HTML (own CSS, light theme), served as static files
+  lab-pages/<topic>/<id>.html  Learning Lab pages: standalone HTML (own CSS, light theme). Kept apart from the /lab/... routes on purpose
 docs/                       DEPLOYMENT.md, CONTINUE-PROMPT.md, ai-chatbot-plan.md
 src/
   main.jsx                  React root, MotionConfig reducedMotion="user"
   App.jsx                   Router, routes, Navbar, SocialRail, ScrollButton, ChatWidget
   index.css                 Tailwind layers, CSS variables, scrollbar/selection, chat markdown styles
-  pages/                    HomePage (all sections), ProjectsPage, CertificatesPage, BlogPage, LabPage
+  pages/                    HomePage (all sections), ProjectsPage, CertificatesPage, BlogPage, LabPage, LabArticlePage
   hooks/useModalDismiss.js  Esc / outside-click close for modals
   data/                     ALL CONTENT (see Data files)
   assets/                   hero_portrait.webp, logo.png, project banners, about image
@@ -136,7 +136,7 @@ Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, 
 - **Achievements:** achievements grid, onsite contest results table, photo gallery.
 - **Certificates:** `CardSlider` of `CertCard`s, preview modal, "View All" to `/certificates` (category filter + search).
 - **Blog:** `CardSlider` of Medium posts, "View All" to `/blog`. Shown as "Articles" in the navbar.
-- **Learning Lab (`#lab`, section 10):** the 3 newest entries as compact `LabCard`s (title, 2-line summary, read time), "View All" to `/lab`. `/lab` is an index list of `LabRow`s (number, title, one-line summary, topic, read time) with a topic filter (with counts), search, and pagination (10 per page). Entries link to the static pages in `public/lab/`.
+- **Learning Lab (`#lab`, section 10):** the 3 newest entries as compact `LabCard`s (title, 2-line summary, read time), "Open the Lab" to `/lab`. `/lab` (`LabPage`) has no page of its own: it redirects to the first entry in reading order. Each entry lives at `/lab/<topic-slug>/<id>` (`LabArticlePage`): a docs layout with `LabSidebar` (collapsible topic groups from `labTopics`, search, current entry highlighted, "Contents" button below `lg`) and `LabFrame`, which shows the static page from `public/lab-pages/` in an auto-height iframe (hides the page's own back link, makes `#section` links scroll the main window), plus Previous / Next in reading order (topic order, oldest first). Helpers: `components/Lab/labUtils.js` (`topicSlug`, `labPath`, `readingOrder`).
 - **Contact:** big email link, Open-to rows, social rows, footer with quick links.
 - **Chat:** `ChatWidget` posts to `/api/chat` with the last 6 messages. Supports voice in and read-aloud. Rate limit 10 requests per minute per IP (in memory).
 
@@ -153,7 +153,7 @@ Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, 
 | `achievements.js` | `achievements`, `certifications`, `contestHistory`, `contestGallery` |
 | `certificates.js` | `certificates`: id, title, issuer, date, category, imageUrl, credentialUrl, description |
 | `blog.js` | `blogPosts`: id, title, excerpt, date, readTime, tags, url, image |
-| `lab.js` | `labSubtitle`, `labItems` (newest first): id, title, summary, topic, date, readTime, url (`/lab/<topic>/<slug>.html`) |
+| `lab.js` | `labSubtitle`, `labTopics` (sidebar groups in order), `labItems` (newest first): id, title, summary, topic, date, readTime, url (`/lab-pages/<topic-slug>/<id>.html`) |
 
 If a field is optional (for example paper `venue`), the UI must skip it when empty.
 
@@ -195,7 +195,7 @@ Update all of these together: `src/data/*`, `Hero.jsx`/`HeroStats.jsx`, `About.j
 
 - **Add a section:** create `src/components/Name/Name.jsx` using `<EditorialSection id="name">` and `<SectionHeader number label title titleEm subtitle />`; add its data in `src/data/`; add it to `HomePage.jsx` (with a divider) and a link in `navLinks` in `Navbar.jsx`.
 - **Add a project / certificate / blog post / paper:** add an object to the matching array in `src/data/`.
-- **Add a Learning Lab entry:** put the HTML page in `public/lab/<topic>/` and add an object at the top of `labItems` in `src/data/lab.js`. A new `topic` value adds a filter button automatically.
+- **Add a Learning Lab entry:** put the HTML page in `public/lab-pages/<topic-slug>/` and add an object at the top of `labItems` in `src/data/lab.js`. The folder must be the topic slug (`'System Design'` -> `system-design`) and the file name must be the entry `id`. A new topic also goes into `labTopics` (its sidebar group appears automatically).
 - **Change photos:** hero is `src/assets/hero_portrait.webp`, logo is `src/assets/logo.png`, favicon files are in `public/`.
 - **Update contact links:** `Contact.jsx` (`socialLinks`), `SocialRail.jsx` (`links`), `Hero.jsx` (`socials`), `Navbar.jsx` (Hire Me mailto).
 - **Update what the chatbot knows:** edit the `PROFILE` string in `api/chat.js` and redeploy.
