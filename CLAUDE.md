@@ -1,358 +1,202 @@
-# Portfolio Website — CLAUDE.md
+# Portfolio Website - CLAUDE.md
 
-Complete reference for AI-assisted development of Asfak Shahrier's portfolio site.
+Project reference for AI-assisted work on Asfak Shahrier's portfolio. Keep this file current: if you change structure,
+design tokens, data fields, routes or deployment, update this file in the same change.
 
 ---
 
 ## Owner
 
 - **Name:** Asfak Shahrier
-- **Email (main):** shahrierasfak27@gmail.com | asfak.shahrier@workslayr.com (work/portfolio)
-- **Role:** Full Stack Software Engineer (Laravel, Angular, React, Django), Competitive Programmer, ML Researcher, AI Integration
-- **Education:** B.Sc. CSE — Gopalganj Science and Technology University (GSTU), CGPA 3.13/4.00, Dec 2024
-- **Goal:** MSc in Europe (AI/ML focus) + Top tech company roles
+- **Email (main):** shahrierasfak27@gmail.com
+- **Role:** Software Engineer (Laravel, Angular, React, Django), competitive programmer, ML researcher, AI integration
+- **Education:** B.Sc. CSE, Gopalganj Science and Technology University (GSTU), graduated Dec 2024
+- **Goal:** MSc in Europe (AI/ML focus) and strong software engineering roles
+- **Live site:** https://asfakshahrier.vercel.app (Vercel project `protfolio`)
 
 ---
 
-## Current design (editorial redesign) - read this first
+## Tech stack
 
-The site was restyled to a warm editorial dark theme. Where the sections below describe the OLD blue/gradient design
-(Design System colours, SectionWrapper/SectionTitle/Button/Badge, Swiper carousel), this section wins.
+| Tool | Purpose |
+|---|---|
+| React 19 + Vite | UI and build |
+| react-router-dom 7 | Routes: `/`, `/projects`, `/certificates`, `/blog` |
+| Tailwind CSS 3 (NOT v4) | Styling. Do not use v4-only syntax |
+| Framer Motion 12 | Scroll reveal, hero load-in, stat count-up |
+| react-icons 5 | Icons (Fi = Feather, Fa = Font Awesome, Si = Simple Icons) |
+| react-markdown | Renders chatbot replies |
+| @headlessui/react | Accessible primitives |
+| Vercel serverless (`api/`) | Chatbot backend (Groq, model `llama-3.1-8b-instant`) |
 
-- **Palette** (tailwind.config.js): `ink #030303`, `cream #F1EEE8`, `cream-2 #DEDAD4`, `stone #C4BEB6`, `sand #E5CBB0`,
-  `copper #FF8C59` (accent dots/arrows), `peach #F2A67E` (hover colour for every clickable name or link).
-- **Fonts:** `font-serif` = Instrument Serif (headings), `font-dm` = DM Sans (body), `font-mono` = JetBrains Mono (small uppercase labels).
-- **Layout primitives** (`src/components/ui/`): `EditorialSection` (full-width 5vw section), `SectionHeader` (numbered label + serif title),
-  `CardSlider` (scroll-snap slider, used by Certificates and Blog), `SocialRail` (fixed left icon rail, 1180px+),
-  `ScrollButton` (down/up button above the chat), `reveal.js` (fade-up on scroll, spread onto a `motion.*` element), `Logo`.
-- **Removed:** Swiper, SectionWrapper, SectionTitle, Button, Badge, Particles, theme.js.
-- **Navbar:** active link = copper underline drawn left to right; hover = peach underline (no dots). Floating bar, dropdowns kept.
-- **Chat widget:** warm restyle in `ChatWidget.jsx` (button bottom-3 right-4, hover changes colour only). Logic untouched.
-- **Motion:** `reveal.js` fade-up on scroll, hero text slide-up, stat count-up (`HeroStats.jsx`). `MotionConfig reducedMotion="user"` in `main.jsx`.
-- **Favicon:** `public/favicon.png` + `apple-touch-icon.png` (round crop of the hero portrait). Logo = `src/assets/logo.png`.
-- **Honesty rule for papers:** never write a venue or "Under Review" until it is really submitted (paper 2 is "Manuscript Completed").
-- **Rules:** content lives in `src/data/*` and `api/chat.js`; UI changes must not change content. Clickable things hover to `text-peach`.
-  Restart the dev server after editing tailwind.config.js. `npm run lint` and `npm run build` should both pass.
-- **Facts to keep in sync** (data files, About, Hero stats and `api/chat.js`): 3600+ problems, 10 platforms, 6 onsite contests,
-  2 papers (1 published, 1 manuscript completed, no venue yet).
-
----
-
-## Tech Stack
-
-| Tool | Version | Purpose |
-|---|---|---|
-| React | 19.x | UI framework |
-| Vite | 8.x | Build tool / dev server |
-| Tailwind CSS | 3.x | Styling (utility-first) |
-| Framer Motion | 12.x | Animations (scroll reveal, hover, float) |
-| React Icons | 5.x | Icons (Fi* = Feather, Fa* = FontAwesome) |
-| @headlessui/react | 2.x | Accessible UI primitives |
-
-### Dev Commands
+### Commands
 ```bash
-npm run dev      # Start dev server (http://localhost:5173)
-npm run build    # Production build → dist/
-npm run preview  # Preview production build
+npm run dev      # Vite only, http://localhost:5173 (no /api, chat will not work)
+vercel dev       # site + /api on http://localhost:3000 (use this to test the chatbot)
+npm run lint     # must pass with 0 errors
+npm run build    # production build to dist/, must pass
 ```
-
-
-├── index.html                    ← HTML entry (Google Fonts: Inter, JetBrains Mono)
-├── vite.config.js
-├── tailwind.config.js            ← Custom colors, fonts, animations
-├── postcss.config.js
-├── package.json
-└── src/
-    ├── main.jsx                  ← React root entry
-    ├── App.jsx                   ← Root layout + section dividers + alternating backgrounds
-    ├── App.css                   ← Empty (all styles via Tailwind)
-    ├── index.css                 ← Tailwind directives + custom utilities + Swiper overrides
-    │
-    ├── assets/
-    │   ├── hero_image1.jpeg      ← Hero section photo (circular frame with rings)
-    │   └── about_us_image.jpeg   ← About section photo (tall card, 340×420)
-    │
-    ├── data/                     ← ALL CONTENT LIVES HERE — edit these to update text
-    │   ├── projects.js           ← featuredProjects (2), otherProjects (3)
-    │   ├── experience.js         ← workExperience (2), cpExperience (4 platforms), cpStats
-    │   ├── skills.js             ← skillCategories (5 groups)
-    │   ├── research.js           ← researchPapers (2), researchInterests
-    │   └── achievements.js       ← achievements (6), contestHistory (5)
-    │
-    ├── components/
-    │   ├── Navbar/
-    │   │   └── Navbar.jsx        ← Fixed navbar, h-20, blur-on-scroll, active link dot
-    │   ├── Hero/
-    │   │   └── Hero.jsx          ← Full-screen, typewriter, circular photo + rings, stats bar
-    │   ├── About/
-    │   │   └── About.jsx         ← Photo left (340×420), bio right, education cards
-    │   ├── Experience/
-    │   │   └── Experience.jsx    ← Tabs: [Work Experience | Competitive Programming]
-    │   ├── Projects/
-    │   │   ├── Projects.jsx      ← 2 featured (alt layout) + Swiper carousel
-    │   │   └── ProjectCard.jsx   ← FeaturedProjectCard + SmallProjectCard
-    │   ├── Skills/
-    │   │   └── Skills.jsx        ← 4 category cards with animated bars + badge cloud
-    │   ├── Research/
-    │   │   └── Research.jsx      ← Paper cards with banner image, abstract, findings
-    │   ├── Achievements/
-    │   │   └── Achievements.jsx  ← Achievement cards + contest table + photo gallery
-    │   ├── Contact/
-    │   │   └── Contact.jsx       ← Social links grid + email CTA + footer
-    │   └── ui/                   ← Reusable primitives
-    │       ├── SectionWrapper.jsx   ← motion section, fade-in on scroll, max-w-7xl
-    │       ├── SectionTitle.jsx     ← label + h2 + subtitle + gradient underline
-    │       ├── Button.jsx           ← variants: primary/secondary/red/ghost
-    │       └── Badge.jsx            ← colored pill tags, sizes: xs/sm/md
-    │
-    └── (hooks/, utils/, pages/ — not yet created, reserved for future use)
-```
+After editing `tailwind.config.js`, restart the dev server (it is only read at startup).
 
 ---
 
-## Design System
+## Project structure
 
-### Colors
-```js
-// Background layers (darkest → lightest card)
-black        = #000000   // base bg
-surface      = #0d0d0d   // alternating section bg
-card         = #111111   // card backgrounds
-card-hover   = #161616
-border       = #1f1f1f   // subtle borders
-border-light = #2a2a2a   // hover borders
-
-// Accents
-blue-400  = #60A5FA
-blue-500  = #3B82F6   ← primary accent
-blue-600  = #2563EB
-red-400   = #F87171
-red-500   = #EF4444   ← secondary accent
-
-// Text hierarchy
-white      = primary headings
-gray-200   = body text (high visibility)
-gray-300   = body text (standard)
-gray-400   = secondary labels
-gray-500+  = avoid — too dim on black bg
+```
+index.html                  Google Fonts, favicon, meta
+tailwind.config.js          Colour tokens + fonts (see Design system)
+vercel.json                 SPA rewrite: /(.*) -> /index.html
+api/
+  chat.js                   Chatbot (Groq). Holds the PROFILE text the bot answers from. Needs GROQ_API_KEY
+  hello.js                  Test endpoint
+public/                     favicon.png, apple-touch-icon.png, resume.pdf, certs/, papers/, achievements/
+docs/                       DEPLOYMENT.md, CONTINUE-PROMPT.md, ai-chatbot-plan.md
+src/
+  main.jsx                  React root, MotionConfig reducedMotion="user"
+  App.jsx                   Router, routes, Navbar, SocialRail, ScrollButton, ChatWidget
+  index.css                 Tailwind layers, CSS variables, scrollbar/selection, chat markdown styles
+  pages/                    HomePage (all sections), ProjectsPage, CertificatesPage, BlogPage
+  hooks/useModalDismiss.js  Esc / outside-click close for modals
+  data/                     ALL CONTENT (see Data files)
+  assets/                   hero_portrait.webp, logo.png, project banners, about image
+  components/
+    Navbar/                 Floating navbar with dropdowns
+    Hero/                   Hero.jsx, HeroStats.jsx
+    About/ Experience/ Projects/ Skills/ Research/ Achievements/ Certificates/ Blog/ Contact/
+    Chat/ChatWidget.jsx     Floating chat button + panel
+    ui/                     Shared pieces (see Components)
 ```
 
-### Custom CSS Utilities (src/index.css)
-```css
-.text-gradient-blue   /* blue→lightblue gradient text */
-.text-gradient-red    /* red→lightred gradient text */
-.text-gradient-mixed  /* blue→purple→red gradient text (used on hero name) */
-.glow-blue            /* blue box-shadow glow */
-.glow-red             /* red box-shadow glow */
-.grid-bg              /* subtle dot grid background pattern */
-```
-
-### Typography
-- **Font:** Inter (headings + body), JetBrains Mono (code/labels)
-- **Section titles:** `text-4xl md:text-5xl font-extrabold`
-- **Card headings:** `text-lg font-bold`
-- **Body text:** `text-base md:text-lg text-gray-300`
-- **Labels/mono:** `text-sm font-mono text-gray-400`
-
-### Animations (Framer Motion)
-- **Section reveal:** `initial opacity:0 y:40 → whileInView opacity:1 y:0` (SectionWrapper)
-- **Stagger children:** containerVariants with staggerChildren: 0.12 (Hero)
-- **Float:** `animate y:[0,-10,0]` duration 5s (hero photo)
-- **Spin ring:** `animate rotate:360` duration 18s linear (hero outer ring)
-- **Skill bars:** `whileInView width: level%` duration 0.9s easeOut
-- **Hover lift:** `whileHover y:-5` on cards
+Home page order (`HomePage.jsx`): Hero, About, Experience, Projects, Skills, Research, Achievements, Certificates, Blog, Contact.
+Sections are separated by a 1px divider and share the `--bg-base` background.
 
 ---
 
-## Section-by-Section Guide
+## Design system (current: warm editorial dark)
 
-### App.jsx — Layout
-Sections alternate between two backgrounds with glowing gradient dividers:
-- `SectionDivider` — 2px line, blue→red gradient, box-shadow glow
-- Even sections: `#000000` bg
-- Odd sections: `#0a0a0d` bg
-- Section order: Hero → About → Experience → Projects → Skills → Research → Achievements → Contact
+### Colour tokens (`tailwind.config.js`, use these everywhere)
 
-### Navbar (Navbar.jsx)
-- Height: `h-20` (80px)
-- Logo: `w-11 h-11` rounded-xl, gradient bg, glow shadow
-- Links: `text-[15px] px-4 py-2.5`, active = white + blue dot glow
-- Hire Me: gradient button with glow, `px-5 py-2.5`
-- Mobile: hamburger at `lg:hidden` (992px breakpoint)
-- Scroll detection: sets `scrolled` state → adds blur/border
+| Token | Hex | Use |
+|---|---|---|
+| `ink` | `#030303` | Page background |
+| `cream` | `#F1EEE8` | Primary text, borders at low opacity (`border-cream/10`) |
+| `cream-2` | `#DEDAD4` | Body text on cards |
+| `stone` | `#C4BEB6` | Secondary/muted text, mono labels |
+| `sand` | `#E5CBB0` | Tags, venues, highlighted words |
+| `copper` | `#FF8C59` | Accent: dots, arrows, numbers, active underline, focus border |
+| `peach` | `#F2A67E` | Hover colour for every clickable name or link |
 
-### Hero (Hero.jsx)
-- Image: `src/assets/hero_image1.jpeg` — 300×300 circle
-- Rings: spinning conic-gradient outer, dashed middle, radial glow inner
-- Typewriter: cycles through `['Full Stack Engineer', 'Competitive Programmer', 'ML Researcher', 'Problem Solver']`
-- Stats bar: 4 cards at bottom (3600+ problems, 2 papers, 2 jobs, 3.13 CGPA)
-- **To change hero image:** swap `hero_image1.jpeg` in assets + update import in Hero.jsx
+Other fixed colours used inline: panels `#0b0a09`, buttons/cards `#0d0d0d`, hint text `#9E978E`, online dot `emerald-400`.
+Hairlines are `border-cream/10`. Hover for links and icon buttons: `hover:text-peach` (and `hover:bg-peach/10` for round icon buttons).
 
-### About (About.jsx)
-- Image: `src/assets/about_us_image.jpeg` — 340×420 tall card, `objectPosition: top center`
-- Layout: `lg:grid-cols-5` → image takes 2 cols, bio takes 3 cols
-- Education: 2 cards side by side on md+
-- **To change about image:** swap `about_us_image.jpeg` in assets (filename must match import)
+### Fonts
+- `font-serif` = Instrument Serif: headings, names, big numbers
+- `font-dm` = DM Sans: body text
+- `font-mono` = JetBrains Mono: small uppercase labels (`text-xs uppercase tracking-[1.5px]`)
+- Section titles: serif, huge (`clamp` up to ~104px), with an italic last word. Layout is full width with `px-[5vw]`.
 
-### Experience (Experience.jsx)
-- Tab 1 — Work Experience: timeline cards from `src/data/experience.js → workExperience`
-- Tab 2 — Competitive Programming: stats banner + 4 platform cards from `cpExperience`
-- Platform cards: show Rating, Solved, Contests, Rank badge, Highlights
-- **To add a platform:** add entry to `cpExperience` array in experience.js
+### Global CSS (`src/index.css`)
+Only `--bg-base` (#030303) is a CSS variable. Text selection and scrollbar hover are copper. A faint film-grain overlay sits on `body::after`.
+The old blue tokens, `grid-bg`/`glow-*`/`text-gradient-*` utilities and the float/gradient animations were removed; do not bring them back.
 
-### Projects (Projects.jsx + ProjectCard.jsx)
-- Featured: 2 projects from `featuredProjects`, alternate left/right image layout
-- Carousel: Swiper with 1/2/3 slides per view (mobile/tablet/desktop), autoplay 4s
-- Other projects: from `otherProjects` array (6 items)
-- **To add a project:** push to `otherProjects` or replace `featuredProjects` entries
-
-### Skills (Skills.jsx)
-- 5 category cards: Languages, Frameworks & Web, ML & Data Science, AI Integration, Tools & Infrastructure
-- Each skill has `name` and `level` (0–100) — bar animates on scroll
-- **To update skills:** edit `src/data/skills.js`
-
-### Research (Research.jsx)
-- Each paper card has a banner image (Unsplash URL), abstract, findings, keywords, tools
-- Paper images: `researchImages` array inside Research.jsx (Unsplash URLs, index % length)
-- Status badges: "In Press" = blue, "Published" = green, "Under Review" = yellow
-- Current papers: NPM link sharing (In Press, Communications in S&S) + CSE career prediction (Under Review, IEEE)
-- **To add a paper:** push to `researchPapers` in research.js
-
-### Achievements (Achievements.jsx)
-- 6 achievement cards in 2-col grid
-- Contest ranking table with progress bar
-- Photo gallery: 6 Unsplash images (replace with real contest photos)
-- **To update:** edit `src/data/achievements.js`
-
-### Contact (Contact.jsx)
-- 6 social links: GitHub, LinkedIn, Twitter, Facebook, WhatsApp, Codeforces
-- Email CTA button links to `mailto:asfak.shahrier@workslayr.com`
-- Footer: built-with note + back-to-top button
-- **To update social links:** edit `socialLinks` array inside Contact.jsx directly
+### Motion
+- Sections fade in once (`EditorialSection`, `viewport once`). Cards and rows fade up with `reveal(i)` from `ui/reveal.js`.
+- Hero text slides up in a stagger. Hero stats count up once when seen (`HeroStats.jsx`).
+- Hover changes colour only; buttons do not lift or move.
+- Reduced motion is respected via `MotionConfig reducedMotion="user"`.
 
 ---
 
-## Data Files — Quick Reference
+## Components (`src/components/ui/`)
 
-### src/data/projects.js
-```js
-featuredProjects: [{ id, title, description, longDescription, features[], tech[], github, live, image, tag, color }]
-otherProjects:    [{ id, title, description, tech[], github, live, tag }]
-```
+| Component | What it does |
+|---|---|
+| `EditorialSection` | Full-width section wrapper (`px-[5vw]`, fade-in). Props: `id`, `className` |
+| `SectionHeader` | Numbered label row, serif title with italic tail (`title`, `titleEm`), italic subtitle. Props: `number`, `label`, `title`, `titleEm`, `subtitle`, `as` |
+| `CardSlider` | Scroll-snap slider (1/2/3 per view) with glass side buttons and dots. Used by Certificates and Blog |
+| `SocialRail` | Fixed left icon rail (GitHub, LinkedIn, Medium, WhatsApp, Email). Shows from 1180px, fades over the footer |
+| `ScrollButton` | Round button above the chat button: down arrow near top, up arrow after scrolling |
+| `Logo` | AS monogram image (`src/assets/logo.png`) |
+| `reveal.js` | `reveal(i)` returns motion props for a fade-up on scroll; spread onto a `motion.*` element |
 
-### src/data/experience.js
-```js
-workExperience: [{ id, role, company, location, period, type, description, responsibilities[], tech[], color }]
-cpExperience:   [{ platform, handle, rating, maxRating, rank, problems, contests, color, icon, url, highlights[] }]
-cpStats:        { totalProblems, totalContests, bestRank, favoriteTopics[] }
-```
-
-### src/data/skills.js
-```js
-skillCategories: [{ category, icon, color, tag, skills: [{ name, level }] }]
-// 5 groups: Languages | Frameworks & Web | ML & Data Science | AI Integration | Tools & Infrastructure
-```
-
-### src/data/research.js
-```js
-researchPapers: [{ id, title, status, venue, year, abstract, findings[], tools[], keywords[], doi, pdf, color }]
-researchInterests: string[]
-```
-
-### src/data/achievements.js
-```js
-achievements:   [{ id, title, description, category, year, icon, color }]
-contestHistory: [{ name, rank, participants, year }]
-```
+Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, Particles, `theme.js`.
 
 ---
 
-## UI Components — Usage
+## Sections and pages
 
-### SectionWrapper
-```jsx
-<SectionWrapper id="section-id">
-  {/* content */}
-</SectionWrapper>
-// Wraps in motion.section with fade-in on scroll, max-w-7xl, py-20 md:py-28
-```
-
-### SectionTitle
-```jsx
-<SectionTitle
-  label="/ section-name"   // mono label above title
-  title="Main Heading"
-  subtitle="Optional subtitle text"
-/>
-```
-
-### Button
-```jsx
-<Button variant="primary">...</Button>    // blue filled
-<Button variant="secondary">...</Button>  // border outline
-<Button variant="red">...</Button>        // red filled
-<Button variant="ghost">...</Button>      // text only
-<Button href="/url" target="_blank">...</Button>  // renders as <a>
-```
-
-### Badge
-```jsx
-<Badge color="blue|red|green|yellow|purple|gray" size="xs|sm|md">
-  Text
-</Badge>
-```
+- **Navbar:** floating bar, height 68px. Links: Home, About, Experience (dropdown: Work Experience, Training Program, Competitive Programming), Projects, Skills, Research, More (dropdown: Achievements, Certificates, Blog), Contact, Hire Me. Active link = copper underline drawn left to right; hover = peach underline. Experience dropdown items switch the Experience tab via the `experience-tab` event. On other routes, links navigate home first (`state.scrollTo`).
+- **Hero:** portrait on the right (`hero_portrait.webp`), name "Asfak Shahrier", 5 roles, tagline, View Projects / Get In Touch / Resume buttons, bottom row with GitHub, LinkedIn, Medium and email. Then `HeroStats`: 3600+ problems, 2+ years, 2 papers.
+- **About:** photo, bio, 2x2 info grid, three education columns.
+- **Experience:** 3 tabs (Work, Training, Competitive Programming). Work and training are accordions; CP is a grid of platform cards plus stats.
+- **Projects:** production projects as large cards, other projects as list rows, "View All Projects" to `/projects` (filters + search). Details button opens `ProjectDetailsModal` (portal, Esc/outside click closes).
+- **Skills:** one row per category, sorted by `level`, plus a logo row of favourite tech. Title is "Skills & Tools".
+- **Research:** paper rows (year, status, details, thumbnail, Read Paper link) and a research-interests list.
+- **Achievements:** achievements grid, onsite contest results table, photo gallery.
+- **Certificates:** `CardSlider` of `CertCard`s, preview modal, "View All" to `/certificates` (category filter + search).
+- **Blog:** `CardSlider` of Medium posts, "View All" to `/blog`.
+- **Contact:** big email link, Open-to rows, social rows, footer with quick links.
+- **Chat:** `ChatWidget` posts to `/api/chat` with the last 6 messages. Supports voice in and read-aloud. Rate limit 10 requests per minute per IP (in memory).
 
 ---
 
-## Common Tasks
+## Data files (`src/data/`, all content lives here)
 
-### Add a new section
-1. Create `src/components/NewSection/NewSection.jsx`
-2. Use `<SectionWrapper id="new-section">` + `<SectionTitle>`
-3. Add data file in `src/data/` if needed
-4. Import and add to `src/App.jsx` between `<SectionDivider />` and `<AltSection>`
-5. Add nav link to `navLinks` array in `Navbar.jsx`
+| File | Exports |
+|---|---|
+| `projects.js` | `featuredProjects` (2), `otherProjects` (3). Fields: id, title, description, longDescription, features[], tech[], github, live, image, tag, subProjects[]. `tag: 'Production'` projects render as large cards |
+| `experience.js` | `workExperience`, `trainingExperience`, `cpExperience`, `cpStats` (`totalProblems: 3600`, `onsiteContests: 6`, `platforms: 10`) |
+| `skills.js` | `skillCategories`: category, icon, color, tag, skills[{ name, level }] |
+| `research.js` | `researchPapers` (title, status, venue, supervisor, year, abstract, findings[], tools[], keywords[], doi, pdf, image), `researchInterests` |
+| `achievements.js` | `achievements`, `certifications`, `contestHistory`, `contestGallery` |
+| `certificates.js` | `certificates`: id, title, issuer, date, category, imageUrl, credentialUrl, description |
+| `blog.js` | `blogPosts`: id, title, excerpt, date, readTime, tags, url, image |
 
-### Change a profile photo
-- Hero: replace `src/assets/hero_image1.jpeg` (keep same filename OR update import in Hero.jsx line 4)
-- About: replace `src/assets/about_us_image.jpeg` (keep same filename OR update import in About.jsx line 3)
-
-### Update personal info
-- Name, email, social links: search for "Asfak" and "asfak.shahrier" across components
-- Key locations: `Navbar.jsx` (Hire Me mailto), `Hero.jsx` (email text), `Contact.jsx` (socialLinks array + email href)
-
-### Adjust animation speed
-- Scroll reveal: `SectionWrapper.jsx` → `transition={{ duration: 0.6 }}`
-- Hero float: `Hero.jsx` → `transition={{ duration: 5 }}`
-- Skill bars: `Skills.jsx SkillBar` → `transition={{ duration: 0.9 }}`
-
-### Add real social links
-Edit `socialLinks` array in `src/components/Contact/Contact.jsx`:
-```js
-{ label: 'GitHub', handle: '@yourhandle', href: 'https://github.com/yourhandle', ... }
-```
+If a field is optional (for example paper `venue`), the UI must skip it when empty.
 
 ---
 
-## Known Patterns & Conventions
+## Facts that must stay in sync
 
-- **Never use `text-gray-500` or darker for body text** — too dim on black background. Use `text-gray-300` minimum.
-- **Inline styles for one-off values** — when Tailwind doesn't have exact hex/rgba, use `style={{}}` directly.
-- **All section backgrounds** use inline `style={{ background: '...' }}` in App.jsx `AltSection`, not Tailwind bg classes.
-- **Border colors** often done via `style={{ borderColor: 'rgba(255,255,255,0.08)' }}` for precision.
-- **Framer Motion** `whileInView` always paired with `viewport={{ once: true }}` — animate only once on scroll.
-- **Swiper CSS** must be imported in the component file: `import 'swiper/css'` etc.
-- **Tailwind v3** is used — NOT v4. Do not use v4-only syntax like `@theme` or `bg-white/8` without the `/` opacity syntax check.
+Update all of these together: `src/data/*`, `Hero.jsx`/`HeroStats.jsx`, `About.jsx`, `Contact.jsx`, and the PROFILE text in `api/chat.js`.
+- 3600+ problems solved, 10 platforms, 6 onsite contests
+- 2 research papers: paper 1 is **Published** (Communications in Software and Systems, 2026); paper 2 is **Manuscript Completed** (2026) with no venue yet
+- Honesty rule: never write a venue, "Under Review" or "Accepted" for a paper until it is true
+- Work: Sites N Apps (Jan 2026 to present, remote, full-time) and Trickcel (Oct 2024 to Dec 2025, full-time, no "Remote" tag)
+- Open to Remote and relocation is availability text, not a job location
 
 ---
 
-## Deployment Notes
+## Deployment
 
-- Build output: `dist/` folder (run `npm run build`)
-- Assets are hashed by Vite: `hero_image1-DGMNu81P.jpeg` etc.
-- To deploy: upload `dist/` to any static host (Vercel, Netlify, GitHub Pages)
-- For Vercel/Netlify SPA routing: add `/* → /index.html` rewrite rule
+- Hosting: Vercel, project `protfolio`. `api/*.js` run as serverless functions, so deploy the repo, not just `dist/`.
+- Secret: `GROQ_API_KEY` must exist in Vercel (Production, and Preview if you want chat on previews) and in local `.env`.
+- Deploy by Git (push or merge to `main` deploys production, other branches create previews) or by CLI (`vercel`, `vercel --prod`).
+- Full steps and past problems: `docs/DEPLOYMENT.md`.
 
+---
+
+## Rules and conventions
+
+- **Content lives in `src/data/*` and `api/chat.js`.** UI work must not change content unless asked.
+- Warm palette only (tokens above). No blue accents, no gradient text, no emoji icons, no em dashes in site copy.
+- Body text uses `text-cream` or `text-cream-2`; never dim greys. Muted text is `text-stone`.
+- Every clickable name or link hovers to `text-peach`. Hover does not move elements.
+- Framer Motion `whileInView` always uses `viewport={{ once: true }}`.
+- Before finishing a change: `npm run lint` and `npm run build` pass, and check the page in a browser.
+- The user commits and deploys; do not commit unless asked.
+
+---
+
+## Common tasks
+
+- **Add a section:** create `src/components/Name/Name.jsx` using `<EditorialSection id="name">` and `<SectionHeader number label title titleEm subtitle />`; add its data in `src/data/`; add it to `HomePage.jsx` (with a divider) and a link in `navLinks` in `Navbar.jsx`.
+- **Add a project / certificate / blog post / paper:** add an object to the matching array in `src/data/`.
+- **Change photos:** hero is `src/assets/hero_portrait.webp`, logo is `src/assets/logo.png`, favicon files are in `public/`.
+- **Update contact links:** `Contact.jsx` (`socialLinks`), `SocialRail.jsx` (`links`), `Hero.jsx` (`socials`), `Navbar.jsx` (Hire Me mailto).
+- **Update what the chatbot knows:** edit the `PROFILE` string in `api/chat.js` and redeploy.
+
+---
 
 # CLAUDE.md
 
