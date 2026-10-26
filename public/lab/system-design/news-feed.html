@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How a news feed shows you your friends' posts: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Precomputed feeds, hybrid fan-out for celebrity accounts, caches for viral posts, and cursor paging.">
+<title>How a news feed shows you your friends' posts | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How a news feed shows you your friends' posts</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>20 min</b> read</span></div>
+  <p class="lede">I open Facebook, scroll for a minute, and close it. It feels like the simplest screen on the internet: a list of posts from people I follow, newest first. But the same list has to be built for about two billion people, some of whom follow thousands of accounts, while a few accounts have tens of millions of followers. These notes rebuild that feed step by step, and the whole story turns out to be about one question: do you do the work when someone posts, or when someone reads?</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why a naive "query everyone I follow" feed falls apart</li>
+    <li>Fan-out on write vs fan-out on read, and when each wins</li>
+    <li>How a precomputed feed of ~200 post IDs fits in about 4 TB</li>
+    <li>Why accounts with millions of followers get special treatment</li>
+    <li>How a replicated cache survives one viral post</li>
+    <li>Why the feed pages with a timestamp cursor, not page numbers</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>~2B</b><span>users to serve</span></div>
+    <div class="stat"><b>&lt; 500 ms</b><span>to post or load the feed</span></div>
+    <div class="stat"><b>≤ 1 min</b><span>staleness that's acceptable</span></div>
+    <div class="stat"><b>~200</b><span>post IDs kept per feed</span></div>
+    <div class="stat"><b>~4 TB</b><span>for every precomputed feed</span></div>
+    <div class="stat"><b>5,000</b><span>Facebook's friend cap</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities &amp; API</a>
+    <a href="#hld">Architecture</a><a href="#flow">Post &amp; read flows</a><a href="#fanout">Fan-out</a>
+    <a href="#celebrity">Celebrities</a><a href="#hot">Hot posts</a><a href="#paging">Paging</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts &amp; labs</a><a href="#memory">Draw it from memory</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>Save posts and follows in DynamoDB</span></div>
+    <div><b>v2</b><span>Build the feed at read time by querying everyone I follow</span></div>
+    <div><b>v3</b><span>Precompute each feed when a post is created</span></div>
+    <div><b>v4</b><span>Queue + workers, and skip huge accounts (hybrid)</span></div>
+    <div><b>v5</b><span>Replicated post cache for viral posts</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>WhatsApp was about delivering one message to the right people. LeetCode was about running strangers' code. A news feed is about <b>reads</b>: people scroll far more often than they post. So every version below moves a bit more work away from the moment you open the app, until reading your feed is mostly one lookup.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>Create a post</li>
+      <li>Follow other users (one direction, like Twitter)</li>
+      <li>See posts from people I follow, newest first</li>
+      <li>Keep scrolling (page through the feed)</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Availability over consistency: a post may take up to 1 minute to show up</li>
+      <li>Posting and loading the feed in under 500 ms</li>
+      <li>About 2 billion users</li>
+      <li>No limit on follows or followers</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Likes and comments</li>
+      <li>Private or friends-only posts</li>
+      <li>Unfollowing</li>
+      <li>Login (assume a session or JWT)</li></ul></div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">Entities: <b>User</b>, <b>Follow</b> (a one-way link: A follows B), and <b>Post</b> (written by one user, shown to that user's followers).</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /posts</code></td><td><code>content</code></td><td>A <code>postId</code></td></tr>
+      <tr><td><code>PUT /users/:id/follow</code></td><td>Nothing (who I am comes from the token)</td><td>OK</td></tr>
+      <tr><td><code>GET /feed?pageSize=20&amp;cursor=…</code></td><td>Page size, optional cursor</td><td><code>items</code> (posts) and <code>nextCursor</code></td></tr>
+    </tbody></table></div>
+  <div class="schema">
+    <div class="tbl"><h4>Post</h4><div><span class="k">postId</span><small>partition key</small></div><div><span>creatorId</span><small>GSI partition</small></div><div><span>createdAt</span><small>GSI sort</small></div><div><span>content</span><small></small></div></div>
+    <div class="tbl"><h4>Follow</h4><div><span class="k">userFollowing</span><small>partition key</small></div><div><span class="k">userFollowed</span><small>sort key</small></div><div><span>GSI</span><small>same keys, swapped</small></div></div>
+    <div class="tbl"><h4>PrecomputedFeed</h4><div><span class="k">userId</span><small>partition key</small></div><div><span>postIds</span><small>~200, newest first</small></div></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Follow uses <code>PUT</code>, not <code>POST</code>, because following someone twice should change nothing. That's what <b>idempotent</b> means: repeat the call and the result is the same. The Follow table answers three questions with plain key lookups: "does A follow B?" (point read), "who does A follow?" (range on the main key), and "who follows A?" (range on the swapped-key GSI, a <i>global secondary index</i>, which is DynamoDB's word for a second way to look up the same rows). Nothing needs friends-of-friends, so no graph database is needed.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Each later section zooms into one part of it.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 510" role="img" aria-label="News feed architecture">
+      <rect x="20" y="230" width="110" height="64" rx="8" class="n"/><text x="75" y="257" text-anchor="middle" class="tl1">Client</text><text x="75" y="276" text-anchor="middle" class="tl2">web · mobile</text>
+      <rect x="160" y="230" width="110" height="64" rx="8" class="n"/><text x="215" y="257" text-anchor="middle" class="tl1">API gateway</text><text x="215" y="276" text-anchor="middle" class="tl2">auth · LB</text>
+
+      <rect x="320" y="40" width="140" height="64" rx="8" class="nt"/><text x="390" y="67" text-anchor="middle" class="tl1">Post service</text><text x="390" y="86" text-anchor="middle" class="tl2">stateless</text>
+      <rect x="320" y="230" width="140" height="64" rx="8" class="nt"/><text x="390" y="257" text-anchor="middle" class="tl1">Feed service</text><text x="390" y="276" text-anchor="middle" class="tl2">hybrid merge</text>
+      <rect x="320" y="420" width="140" height="64" rx="8" class="nt"/><text x="390" y="447" text-anchor="middle" class="tl1">Follow service</text><text x="390" y="466" text-anchor="middle" class="tl2">PUT follow</text>
+
+      <rect x="580" y="40" width="170" height="64" rx="8" class="nb"/><text x="665" y="67" text-anchor="middle" class="tl1">Post table</text><text x="665" y="86" text-anchor="middle" class="tl2">GSI: creatorId+time</text>
+      <rect x="580" y="134" width="170" height="60" rx="8" class="na"/><text x="665" y="159" text-anchor="middle" class="tl1">Post cache (Redis)</text><text x="665" y="177" text-anchor="middle" class="tl2">replicated · LRU</text>
+      <rect x="580" y="230" width="170" height="64" rx="8" class="nb"/><text x="665" y="257" text-anchor="middle" class="tl1">PrecomputedFeed</text><text x="665" y="276" text-anchor="middle" class="tl2">userId → 200 IDs</text>
+      <rect x="580" y="420" width="170" height="64" rx="8" class="nb"/><text x="665" y="447" text-anchor="middle" class="tl1">Follow table</text><text x="665" y="466" text-anchor="middle" class="tl2">+ reversed GSI</text>
+
+      <rect x="800" y="40" width="160" height="64" rx="8" class="na"/><text x="880" y="67" text-anchor="middle" class="tl1">Queue (SQS)</text><text x="880" y="86" text-anchor="middle" class="tl2">postId · creatorId</text>
+      <rect x="800" y="230" width="160" height="64" rx="8" class="nt"/><text x="880" y="257" text-anchor="middle" class="tl1">Feed workers</text><text x="880" y="276" text-anchor="middle" class="tl2">skip celebrities</text>
+
+      <path d="M130 262 H157" class="e" marker-end="url(#am)"/>
+      <path d="M270 248 L317 84" class="e" marker-end="url(#am)"/>
+      <path d="M270 262 H317" class="e" marker-end="url(#am)"/>
+      <path d="M270 276 L317 440" class="e" marker-end="url(#am)"/>
+
+      <path d="M460 72 H577" class="eb" marker-end="url(#ab)"/><text x="518" y="64" text-anchor="middle" class="tb">save</text>
+      <path d="M390 40 V22 H880 V37" class="ea" marker-end="url(#aa)"/><text x="620" y="15" text-anchor="middle" class="ta">enqueue new post</text>
+      <path d="M880 104 V227" class="ea" marker-end="url(#aa)"/>
+      <path d="M800 262 H753" class="ea" marker-end="url(#aa)"/><text x="776" y="252" text-anchor="middle" class="ta">prepend</text>
+      <path d="M830 294 L740 417" class="eb" marker-end="url(#ab)"/><text x="800" y="380" class="tb">followers</text>
+
+      <path d="M460 268 H577" class="eb" marker-end="url(#ab)"/><text x="518" y="286" text-anchor="middle" class="tb">my IDs</text>
+      <path d="M460 242 L577 178" class="ea" marker-end="url(#aa)"/><text x="470" y="200" class="ta">hydrate</text>
+      <path d="M665 134 V107" class="ea dash" marker-end="url(#aa)"/><text x="675" y="125" class="ta">miss</text>
+      <path d="M460 452 H577" class="eb" marker-end="url(#ab)"/><text x="518" y="444" text-anchor="middle" class="tb">save</text>
+    </svg>
+    </div>
+    <figcaption>Writing a post is cheap: save it, drop a job on the queue, return. Workers do the slow part later. Reading is mostly one lookup of my precomputed IDs, plus a cache hit for each post's content.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Everything sits in <b>DynamoDB</b> because every access is by a known key: a post by ID, a user's follows by user ID, a feed by user ID. DynamoDB gives full throughput only when keys are spread evenly across partitions, which is true for most of this data and false for one viral post. That exception gets its own section below, just like the hot-video partitions in my YouTube note.</p></div>
+</section>
+
+<!-- FLOWS -->
+<section id="flow">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>What happens when you post, and when you scroll</h2>
+    <p class="lede">Two flows, two very different shapes. Posting returns early and leaves work for later. Reading gathers a few pieces and stitches them together.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 440" role="img" aria-label="Post creation sequence">
+      <rect x="10" y="16" width="120" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="150" y="16" width="120" height="44" rx="8" class="nt"/><text x="210" y="43" text-anchor="middle" class="tl1">Post service</text>
+      <rect x="290" y="16" width="120" height="44" rx="8" class="nb"/><text x="350" y="43" text-anchor="middle" class="tl1">Post table</text>
+      <rect x="430" y="16" width="120" height="44" rx="8" class="na"/><text x="490" y="43" text-anchor="middle" class="tl1">Queue</text>
+      <rect x="570" y="16" width="120" height="44" rx="8" class="nt"/><text x="630" y="43" text-anchor="middle" class="tl1">Feed worker</text>
+      <rect x="710" y="16" width="120" height="44" rx="8" class="nb"/><text x="770" y="43" text-anchor="middle" class="tl1">Follow table</text>
+      <rect x="845" y="16" width="120" height="44" rx="8" class="nb"/><text x="905" y="43" text-anchor="middle" class="tl1">Feed table</text>
+      <path d="M70 60 V425 M210 60 V425 M350 60 V425 M490 60 V425 M630 60 V425 M770 60 V425 M905 60 V425" class="life"/>
+
+      <path d="M70 100 H206" class="e" marker-end="url(#am)"/><text x="140" y="93" text-anchor="middle" class="tlb">1 POST /posts</text>
+      <path d="M210 140 H346" class="eb" marker-end="url(#ab)"/><text x="280" y="133" text-anchor="middle" class="tb">2 save post</text>
+      <path d="M210 180 H486" class="ea" marker-end="url(#aa)"/><text x="350" y="173" text-anchor="middle" class="ta">3 enqueue postId</text>
+      <path d="M210 220 H74" class="e dash" marker-end="url(#am)"/><text x="140" y="213" text-anchor="middle" class="tlb">4 postId</text>
+      <path d="M490 260 H626" class="ea" marker-end="url(#aa)"/><text x="560" y="253" text-anchor="middle" class="ta">5 pull job</text>
+      <path d="M630 300 H766" class="eb" marker-end="url(#ab)"/><text x="700" y="293" text-anchor="middle" class="tb">6 get followers</text>
+      <rect x="555" y="318" width="150" height="34" rx="6" class="nt"/><text x="630" y="340" text-anchor="middle" class="tlb">7 big account? skip</text>
+      <path d="M630 390 H901" class="ea" marker-end="url(#aa)"/><text x="767" y="383" text-anchor="middle" class="ta">8 prepend to each feed</text>
+    </svg>
+    </div>
+    <figcaption>The user gets their answer at step 4. Steps 5 to 8 run in the background, which is why a new post can take a little while (up to the 1-minute budget) to reach every follower.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 410" role="img" aria-label="Feed read sequence">
+      <rect x="10" y="16" width="120" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="170" y="16" width="120" height="44" rx="8" class="nt"/><text x="230" y="43" text-anchor="middle" class="tl1">Feed service</text>
+      <rect x="340" y="16" width="120" height="44" rx="8" class="nb"/><text x="400" y="43" text-anchor="middle" class="tl1">Feed table</text>
+      <rect x="500" y="16" width="120" height="44" rx="8" class="nb"/><text x="560" y="43" text-anchor="middle" class="tl1">Follow table</text>
+      <rect x="660" y="16" width="120" height="44" rx="8" class="nb"/><text x="720" y="43" text-anchor="middle" class="tl1">Post table</text>
+      <rect x="820" y="16" width="120" height="44" rx="8" class="na"/><text x="880" y="43" text-anchor="middle" class="tl1">Post cache</text>
+      <path d="M70 60 V395 M230 60 V395 M400 60 V395 M560 60 V395 M720 60 V395 M880 60 V395" class="life"/>
+
+      <path d="M70 100 H226" class="e" marker-end="url(#am)"/><text x="150" y="93" text-anchor="middle" class="tlb">1 GET /feed?cursor</text>
+      <path d="M230 140 H396" class="eb" marker-end="url(#ab)"/><text x="315" y="133" text-anchor="middle" class="tb">2 my ~200 post IDs</text>
+      <path d="M230 180 H556" class="eb" marker-end="url(#ab)"/><text x="395" y="173" text-anchor="middle" class="tb">3 big accounts I follow</text>
+      <path d="M230 220 H716" class="eb" marker-end="url(#ab)"/><text x="475" y="213" text-anchor="middle" class="tb">4 their recent posts (GSI)</text>
+      <rect x="142" y="240" width="176" height="34" rx="6" class="nt"/><text x="230" y="262" text-anchor="middle" class="tlb">5 merge, sort, cut</text>
+      <path d="M230 310 H876" class="ea" marker-end="url(#aa)"/><text x="555" y="303" text-anchor="middle" class="ta">6 hydrate posts by ID</text>
+      <path d="M230 360 H74" class="e dash" marker-end="url(#am)"/><text x="150" y="353" text-anchor="middle" class="tlb">7 posts + cursor</text>
+    </svg>
+    </div>
+    <figcaption>Steps 2 to 4 can run in parallel. For most people step 3 finds only a handful of big accounts, so the merge in step 5 is small. "Hydrate" just means turning post IDs into full posts.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Posting is a <b>long-running task</b> hidden behind a quick reply, the same trick as LeetCode's "Pending" and YouTube's video processing: accept, return an ID, finish in the background. The 1-minute staleness allowance in the requirements is what makes this legal. If the product demanded "every follower sees it instantly", this design would not work.</p></div>
+</section>
+
+<!-- FANOUT -->
+<section id="fanout">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>When you follow thousands of accounts</h2>
+    <p class="lede">Version 2 built the feed at read time: look up everyone I follow, fetch each one's recent posts, merge, sort. Fine for 50 follows. Painful for 5,000.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Fan-out on read only</h3><p>One feed load turns into thousands of queries, then a big merge. The rare heavy users are exactly the ones who blow the 500 ms target.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Fan-out on write (precomputed feed)</h3><p>When someone posts, push the post ID into every follower's feed row. Reading becomes one key lookup. <b>Chosen</b> (with a twist in the next section).</p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 330" role="img" aria-label="Fan-out on read versus fan-out on write">
+      <rect x="20" y="14" width="440" height="300" rx="10" class="n"/>
+      <text x="40" y="42" class="tl1">Fan-out on read</text><text x="40" y="60" class="tl2">work happens when you open the app</text>
+      <rect x="40" y="140" width="110" height="56" rx="8" class="nt"/><text x="95" y="164" text-anchor="middle" class="tl1">You</text><text x="95" y="182" text-anchor="middle" class="tl2">open feed</text>
+      <rect x="270" y="80" width="160" height="38" rx="8" class="nb"/><text x="350" y="103" text-anchor="middle" class="tlb">Ann's posts</text>
+      <rect x="270" y="130" width="160" height="38" rx="8" class="nb"/><text x="350" y="153" text-anchor="middle" class="tlb">Bo's posts</text>
+      <rect x="270" y="180" width="160" height="38" rx="8" class="nb"/><text x="350" y="203" text-anchor="middle" class="tlb">Cy's posts</text>
+      <rect x="270" y="230" width="160" height="38" rx="8" class="nb"/><text x="350" y="253" text-anchor="middle" class="tlb">… 4,997 more</text>
+      <path d="M150 160 L267 99 M150 165 L267 149 M150 172 L267 199 M150 178 L267 249" class="eb" marker-end="url(#ab)"/>
+      <text x="40" y="296" class="tr">many queries per read, then a merge</text>
+
+      <rect x="480" y="14" width="460" height="300" rx="10" class="n"/>
+      <text x="500" y="42" class="tl1">Fan-out on write</text><text x="500" y="60" class="tl2">work happens when someone posts</text>
+      <rect x="500" y="140" width="110" height="56" rx="8" class="na"/><text x="555" y="164" text-anchor="middle" class="tl1">Ann</text><text x="555" y="182" text-anchor="middle" class="tl2">posts once</text>
+      <rect x="730" y="80" width="180" height="38" rx="8" class="nt"/><text x="820" y="103" text-anchor="middle" class="tlb">your feed</text>
+      <rect x="730" y="130" width="180" height="38" rx="8" class="nt"/><text x="820" y="153" text-anchor="middle" class="tlb">Bo's feed</text>
+      <rect x="730" y="180" width="180" height="38" rx="8" class="nt"/><text x="820" y="203" text-anchor="middle" class="tlb">Cy's feed</text>
+      <rect x="730" y="230" width="180" height="38" rx="8" class="nt"/><text x="820" y="253" text-anchor="middle" class="tlb">… every follower</text>
+      <path d="M610 160 L727 99 M610 165 L727 149 M610 172 L727 199 M610 178 L727 249" class="ea" marker-end="url(#aa)"/>
+      <text x="500" y="296" class="tt">one cheap lookup per read later</text>
+    </svg>
+    </div>
+    <figcaption>Same data, opposite timing. Since reads vastly outnumber posts, paying once per post beats paying on every scroll.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 180" role="img" aria-label="Precomputed feed storage estimate">
+      <rect x="20" y="30" width="140" height="74" rx="8" class="n"/><text x="90" y="62" text-anchor="middle" class="tl1">200</text><text x="90" y="82" text-anchor="middle" class="tl2">post IDs per feed</text>
+      <text x="180" y="72" text-anchor="middle" class="tl1">×</text>
+      <rect x="200" y="30" width="140" height="74" rx="8" class="n"/><text x="270" y="62" text-anchor="middle" class="tl1">10 bytes</text><text x="270" y="82" text-anchor="middle" class="tl2">per post ID</text>
+      <text x="360" y="72" text-anchor="middle" class="tl1">=</text>
+      <rect x="380" y="30" width="140" height="74" rx="8" class="n"/><text x="450" y="62" text-anchor="middle" class="tl1">~2 KB</text><text x="450" y="82" text-anchor="middle" class="tl2">per user</text>
+      <text x="540" y="72" text-anchor="middle" class="tl1">×</text>
+      <rect x="560" y="30" width="140" height="74" rx="8" class="nb"/><text x="630" y="62" text-anchor="middle" class="tl1">2 billion</text><text x="630" y="82" text-anchor="middle" class="tl2">users</text>
+      <text x="720" y="72" text-anchor="middle" class="tl1">=</text>
+      <rect x="740" y="30" width="140" height="74" rx="8" class="na"/><text x="810" y="62" text-anchor="middle" class="tl1">~4 TB</text><text x="810" y="82" text-anchor="middle" class="tl2">all feeds</text>
+      <text x="450" y="146" text-anchor="middle" class="tl2">rough estimate · a fraction of a cent per user per month to store</text>
+    </svg>
+    </div>
+    <figcaption>Only IDs are stored, not post content, so each feed row is tiny. Compare that tiny cost with the roughly $100 a year a US user is worth in revenue, and precomputing is an easy call.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The cap of ~200 IDs is a product choice as much as a technical one. Almost nobody scrolls past 200 posts, so deep paging can fall back to the slow read-time query. Product limits help too: Facebook caps friends at 5,000. Twitter made the same choice at its own scale: its timeline cache kept at most <b>800 entries</b> per home timeline in Redis, each copy replicated on 3 machines, and only for users active in the last 30 days, so inactive accounts cost no memory at all.</p></div>
+</section>
+
+<!-- CELEBRITY -->
+<section id="celebrity">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>When one account has 90 million followers</h2>
+    <p class="lede">Fan-out on write has a dark side. One post from a celebrity means tens of millions of feed writes. This is the "celebrity problem".</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Post service writes every feed itself</h3><p>Millions of writes inside one request: connection limits, a timeout long before 500 ms, and one unlucky host doing all the work.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Queue + async feed workers</h3><p>Put <code>postId</code> and <code>creatorId</code> on SQS (at-least-once delivery) and let workers fan out. But a 1M-follower job is 1,000× a 1K one, so big jobs need splitting.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Hybrid feed</h3><p>Flag huge accounts as "not precomputed" on the Follow table. Workers skip them; the feed service pulls their recent posts at read time and merges. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 320" role="img" aria-label="Hybrid fan-out for celebrity accounts">
+      <rect x="20" y="40" width="170" height="60" rx="8" class="na"/><text x="105" y="65" text-anchor="middle" class="tl1">Ann</text><text x="105" y="84" text-anchor="middle" class="tl2">300 followers</text>
+      <rect x="20" y="200" width="170" height="60" rx="8" class="nr"/><text x="105" y="225" text-anchor="middle" class="tl1">Star account</text><text x="105" y="244" text-anchor="middle" class="tl2">90M+ followers</text>
+
+      <rect x="260" y="40" width="180" height="60" rx="8" class="nt"/><text x="350" y="65" text-anchor="middle" class="tl1">Feed workers</text><text x="350" y="84" text-anchor="middle" class="tl2">fan-out on write</text>
+      <rect x="520" y="40" width="180" height="60" rx="8" class="nb"/><text x="610" y="65" text-anchor="middle" class="tl1">Your feed table</text><text x="610" y="84" text-anchor="middle" class="tl2">Ann's post ID added</text>
+      <rect x="520" y="200" width="180" height="60" rx="8" class="nb"/><text x="610" y="225" text-anchor="middle" class="tl1">Post table</text><text x="610" y="244" text-anchor="middle" class="tl2">stored once, no fan-out</text>
+
+      <rect x="770" y="110" width="150" height="60" rx="8" class="nt"/><text x="845" y="135" text-anchor="middle" class="tl1">Feed service</text><text x="845" y="154" text-anchor="middle" class="tl2">merge at read</text>
+      <rect x="770" y="240" width="150" height="50" rx="8" class="n"/><text x="845" y="270" text-anchor="middle" class="tl1">What you see</text>
+
+      <path d="M190 70 H257" class="ea" marker-end="url(#aa)"/>
+      <path d="M440 70 H517" class="ea" marker-end="url(#aa)"/>
+      <path d="M190 230 H517" class="er" marker-end="url(#ar)"/><text x="355" y="220" text-anchor="middle" class="tr">skipped by workers</text>
+      <path d="M700 70 L767 125" class="et" marker-end="url(#at)"/>
+      <path d="M700 230 L767 160" class="et" marker-end="url(#at)"/>
+      <path d="M845 170 V237" class="e" marker-end="url(#am)"/>
+      <text x="20" y="300" class="tl2">the follower threshold is a dial, set per account</text>
+    </svg>
+    </div>
+    <figcaption>Normal accounts are pushed; huge accounts are pulled. You follow at most a few huge accounts, so the extra read-time work stays small.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This is the same idea as WhatsApp's large groups: past a certain size, sending one copy per member stops making sense, so you switch strategy. Twitter hit this in real life. Its write fan-out reached 1 million followers in about 3.5 seconds at the median, but a tweet from an account with 31 million followers could take up to <b>5 minutes</b> to land everywhere. Their fix was the same hybrid: merge those accounts in at read time.</p></div>
+</section>
+
+<!-- HOT POSTS -->
+<section id="hot">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>When one post goes viral</h2>
+    <p class="lede">Feeds store only IDs, so every feed load fetches post content by ID. A viral post is fetched by millions of feeds in its first hours, and all those reads hit the same key.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Read straight from DynamoDB</h3><p>DynamoDB likes evenly spread keys. One post at hundreds of reads per second (say 500 rps) overloads its partition.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Sharded Redis cache</h3><p>Cache posts by ID with a long TTL and LRU eviction (posts rarely change). But sharding by ID puts the viral post on one shard: the hot key moved, it didn't vanish.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Replicated cache</h3><p>N independent cache copies, each able to hold any post, behind a load balancer. A hot post is served by all N. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 310" role="img" aria-label="Sharded versus replicated cache for a hot post">
+      <rect x="20" y="14" width="440" height="286" rx="10" class="n"/>
+      <text x="40" y="42" class="tl1">Sharded cache (good)</text>
+      <rect x="40" y="130" width="110" height="56" rx="8" class="n"/><text x="95" y="154" text-anchor="middle" class="tl1">Readers</text><text x="95" y="172" text-anchor="middle" class="tl2">viral post</text>
+      <rect x="270" y="70" width="170" height="50" rx="8" class="nr"/><text x="355" y="91" text-anchor="middle" class="tl1">Shard A</text><text x="355" y="108" text-anchor="middle" class="tl2">post 7 lives here</text>
+      <rect x="270" y="140" width="170" height="50" rx="8" class="n"/><text x="355" y="161" text-anchor="middle" class="tl1">Shard B</text><text x="355" y="178" text-anchor="middle" class="tl2">quiet</text>
+      <rect x="270" y="210" width="170" height="50" rx="8" class="n"/><text x="355" y="231" text-anchor="middle" class="tl1">Shard C</text><text x="355" y="248" text-anchor="middle" class="tl2">quiet</text>
+      <path d="M150 148 L267 88 M150 158 L267 95 M150 168 L267 102" class="er" marker-end="url(#ar)"/>
+      <text x="40" y="286" class="tr">every read lands on one shard</text>
+
+      <rect x="480" y="14" width="440" height="286" rx="10" class="n"/>
+      <text x="500" y="42" class="tl1">Replicated cache (great)</text>
+      <rect x="500" y="130" width="110" height="56" rx="8" class="n"/><text x="555" y="154" text-anchor="middle" class="tl1">Readers</text><text x="555" y="172" text-anchor="middle" class="tl2">via LB</text>
+      <rect x="730" y="70" width="170" height="50" rx="8" class="nt"/><text x="815" y="91" text-anchor="middle" class="tl1">Replica 1</text><text x="815" y="108" text-anchor="middle" class="tl2">has post 7</text>
+      <rect x="730" y="140" width="170" height="50" rx="8" class="nt"/><text x="815" y="161" text-anchor="middle" class="tl1">Replica 2</text><text x="815" y="178" text-anchor="middle" class="tl2">has post 7</text>
+      <rect x="730" y="210" width="170" height="50" rx="8" class="nt"/><text x="815" y="231" text-anchor="middle" class="tl1">Replica 3</text><text x="815" y="248" text-anchor="middle" class="tl2">has post 7</text>
+      <path d="M610 150 L727 95 M610 158 H727 M610 166 L727 230" class="et" marker-end="url(#at)"/>
+      <text x="500" y="286" class="tt">load split N ways, no coordination</text>
+    </svg>
+    </div>
+    <figcaption>With N replicas, a hot post gets roughly N times the throughput. The cost: up to N cache misses for a new post instead of one, and less unique content cached overall.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The trade-off is honest: replication wastes memory on duplicates and multiplies cold misses, but DynamoDB can absorb a few extra misses. In my YouTube note the hot thing was a popular video's metadata; here it's a post. Same lesson both times: <b>sharding spreads different keys, replication spreads one key</b>. Facebook's real system, TAO, pushes this further with layers of cache tiers: follower caches in each region that serve reads and forward misses to a leader tier, with replication lag normally under a second.</p></div>
+</section>
+
+<!-- PAGING -->
+<section id="paging">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>Scrolling without page numbers</h2>
+    <p class="lede">A feed changes while you read it. New posts arrive at the top every few seconds, so "page 2" means something different a moment later.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 240" role="img" aria-label="Cursor pagination with timestamps">
+      <text x="20" y="50" class="tl2">newest</text><text x="904" y="50" text-anchor="end" class="tl2">oldest</text>
+      <text x="294" y="26" text-anchor="middle" class="ta">nextCursor = 10:12</text>
+      <path d="M294 32 V67" class="ea" marker-end="url(#aa)"/>
+      <rect x="20" y="70" width="100" height="56" rx="8" class="nt"/><text x="70" y="95" text-anchor="middle" class="tlb">10:58</text><text x="70" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="132" y="70" width="100" height="56" rx="8" class="nt"/><text x="182" y="95" text-anchor="middle" class="tlb">10:41</text><text x="182" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="244" y="70" width="100" height="56" rx="8" class="nt"/><text x="294" y="95" text-anchor="middle" class="tlb">10:12</text><text x="294" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="356" y="70" width="100" height="56" rx="8" class="nb"/><text x="406" y="95" text-anchor="middle" class="tlb">09:55</text><text x="406" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="468" y="70" width="100" height="56" rx="8" class="nb"/><text x="518" y="95" text-anchor="middle" class="tlb">09:30</text><text x="518" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="580" y="70" width="100" height="56" rx="8" class="nb"/><text x="630" y="95" text-anchor="middle" class="tlb">09:02</text><text x="630" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="692" y="70" width="100" height="56" rx="8" class="n"/><text x="742" y="95" text-anchor="middle" class="tlb">08:47</text><text x="742" y="113" text-anchor="middle" class="tl2">post</text>
+      <rect x="804" y="70" width="100" height="56" rx="8" class="n"/><text x="854" y="95" text-anchor="middle" class="tlb">08:15</text><text x="854" y="113" text-anchor="middle" class="tl2">post</text>
+      <path d="M20 140 V150 H344 V140" class="et"/><text x="182" y="172" text-anchor="middle" class="tt">page 1</text>
+      <path d="M356 140 V150 H680 V140" class="eb"/><text x="518" y="172" text-anchor="middle" class="tb">page 2</text>
+      <text x="470" y="215" text-anchor="middle" class="tl2">GET /feed?pageSize=3&amp;cursor=10:12  →  the next 3 posts older than 10:12</text>
+    </svg>
+    </div>
+    <figcaption>The cursor is the timestamp of the oldest post I've already seen. If five new posts arrive at the top meanwhile, page 2 is still exactly the posts after 10:12: no duplicates, no gaps.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Option</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Offset (<code>?page=2</code>)</td><td><span class="tag bad">BAD</span></td><td>New posts shift everything down, so you see repeats; the database also has to skip over earlier rows</td></tr>
+      <tr><td>Timestamp cursor</td><td><span class="tag great">GREAT</span></td><td>Stable while the feed changes, and maps straight onto the <code>creatorId + createdAt</code> GSI. <b>Chosen.</b></td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>For a precomputed feed the cursor just says where to continue in the list of ~200 IDs. Past the end of that list, the feed service falls back to the slow read-time query with the same cursor. Few people ever scroll that far, which is why the fallback can be slow.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>DynamoDB with key-based tables</b></td><td>SQL joins, graph database</td><td>Every access is a key lookup; no multi-hop graph queries needed</td></tr>
+      <tr><td><b>Follow table + reversed GSI</b></td><td>Two separate tables</td><td>"Who I follow" and "who follows me" from one set of rows</td></tr>
+      <tr><td><b>Precomputed feed of ~200 IDs</b></td><td>Build the feed at read time</td><td>Reads become one lookup; ~4 TB total is cheap</td></tr>
+      <tr><td><b>Queue + async feed workers</b></td><td>Post service writes feeds directly</td><td>Posting stays fast; fan-out happens in the background with retries</td></tr>
+      <tr><td><b>Hybrid: pull huge accounts at read time</b></td><td>Push everything</td><td>Avoids 90M writes per celebrity post; small extra merge on read</td></tr>
+      <tr><td><b>Replicated post cache</b></td><td>No cache, sharded cache</td><td>Spreads one viral post across N copies</td></tr>
+      <tr><td><b>Timestamp cursor</b></td><td>Offset pagination</td><td>Stable while new posts arrive</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>The feed is just IDs</h3><p>I pictured each feed as a copy of posts. It's a short list of ~200 IDs, about 2 KB. The content lives once, in the Post table and the cache.</p></div>
+    <div class="card"><h3>No single right answer</h3><p>Push vs pull isn't a choice you make once. The best design does both, and the dial is set per account based on follower count.</p></div>
+    <div class="card"><h3>Staleness is a feature</h3><p>That 1-minute allowance quietly enables the queue, the workers and the cache. Strict "instant" delivery would make every part harder.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why is building the feed at read time a problem?</summary><p>Someone who follows thousands of accounts triggers thousands of queries plus a big merge on every load. Those requests are rare but impossible to serve under 500 ms, and reads happen far more often than posts.</p></details>
+    <details><summary>A new post takes 40 seconds to appear for some followers. Is that a bug?</summary><p>No. Fan-out runs in background workers, and the requirements allow up to 1 minute of staleness. That allowance is what lets posting return immediately.</p></details>
+    <details><summary>Why not fan out a celebrity's post to all 90 million followers?</summary><p>It's tens of millions of writes for one post, it delays the post for everyone, and it clogs the workers for other users. Instead the celebrity is flagged, skipped by workers, and merged in at read time.</p></details>
+    <details><summary>Why doesn't sharding the post cache fix a viral post?</summary><p>Sharding by post ID puts all reads of that one post on one shard, so the hot key just moves from DynamoDB to Redis. Replicas, each able to serve any post, split that one key's load N ways.</p></details>
+    <details><summary>Why use a timestamp cursor instead of <code>?page=2</code>?</summary><p>New posts keep arriving at the top. With offsets, everything shifts and you see duplicates. "Posts older than 10:12" always means the same set, no matter what arrived since.</p></details>
+    <details><summary>Why is following someone a <code>PUT</code>?</summary><p>Following the same person twice should leave the same state. <code>PUT</code> signals an idempotent operation, so a retried request after a network blip is harmless.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>Fan-out on write vs fan-out on read</li>
+      <li>Hybrid push/pull for high-follower accounts</li>
+      <li>Message queue (SQS) and async workers</li>
+      <li>DynamoDB partition keys and GSIs</li>
+      <li>Hot keys: sharding vs replication</li>
+      <li>Cache TTL and LRU eviction</li>
+      <li>Cursor pagination</li>
+      <li>Eventual consistency and idempotent APIs</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">Store each feed as a Redis list: <code>LPUSH</code> new post IDs and <code>LTRIM 0 199</code> to keep 200</label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">API + Redis queue + 2 workers that fan a post out to every follower's list</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Add a follower threshold: skip big accounts in workers, merge their posts at read time</label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Run 3 Redis containers behind a round-robin proxy and load-test one "viral" key</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Build <code>GET /feed?cursor=</code> on Postgres with an index on <code>(creator_id, created_at)</code></label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Compare offset vs cursor paging while inserting new posts between requests</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Gateway → post, feed and follow services → DynamoDB tables</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The post flow: save, enqueue, reply, then workers fan out</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">The feed read flow: my IDs + big accounts, merge, hydrate</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">Fan-out on read vs on write, side by side</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">The 200 IDs × 10 bytes × 2B users ≈ 4 TB estimate</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Sharded vs replicated cache for a viral post</label></li>
+    <li><input type="checkbox" id="c7"><label for="c7">Timestamp cursor paging</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/fb-news-feed" target="_blank" rel="noopener">Hello Interview's Facebook News Feed breakdown</a>, plus <a href="https://highscalability.com/the-architecture-twitter-uses-to-deal-with-150m-active-users/" target="_blank" rel="noopener">High Scalability's write-up of Twitter's timeline architecture</a> and <a href="https://blog.acolyer.org/2015/05/19/tao-facebooks-distributed-data-store-for-the-social-graph/" target="_blank" rel="noopener">The Morning Paper's summary of Facebook's TAO</a>. The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('nf-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('nf-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

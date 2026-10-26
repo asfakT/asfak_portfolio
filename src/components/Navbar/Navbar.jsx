@@ -21,11 +21,18 @@ const navLinks = [
   { href: '#research', label: 'Research' },
   {
     href: '#achievements',
-    label: 'More',
+    label: 'Recognition',
     children: [
       { href: '#achievements', label: 'Achievements' },
       { href: '#certificates', label: 'Certificates' },
-      { href: '#blog', label: 'Blog' },
+    ],
+  },
+  {
+    href: '#lab',
+    label: 'Learn',
+    children: [
+      { href: '#lab', label: 'Learning Lab' },
+      { href: '#blog', label: 'Articles' },
     ],
   },
   { href: '#contact', label: 'Contact' },

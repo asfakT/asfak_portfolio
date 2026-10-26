@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How WhatsApp delivers a message: a system design learning note by Asfak Shahrier, built one version at a time with diagrams.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-24">
+<meta name="note-summary" content="Write to the inbox first, then ring the doorbell: how a message survives offline users and billions of connections.">
+<meta property="og:title" content="How WhatsApp delivers a message">
+<meta property="og:description" content="A system design learning note by Asfak Shahrier.">
+<title>How WhatsApp delivers a message | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How WhatsApp delivers a message</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>25 min</b> read</span></div>
+  <p class="lede">I send a message from Dhaka and my friend's phone in another country buzzes in under half a second. If her phone is off, the message still waits for her. I wanted to understand how that works at the scale of billions of people, so I rebuilt the design step by step: start with one server, see where it breaks, fix it, and repeat. These are my notes from that process, with a diagram for every step.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why chat apps keep a WebSocket open instead of using normal HTTP requests</li>
+    <li>How a message survives when the receiver is offline</li>
+    <li>How hundreds of servers find the one your friend is connected to</li>
+    <li>Why photos never pass through the chat servers</li>
+    <li>How the system notices dead connections and lost messages</li>
+    <li>The trade-offs behind each choice, and what I'd decide again</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>&lt; 500 ms</b><span>delivery to online users</span></div>
+    <div class="stat"><b>~40K/s</b><span>messages (200M DAU × 20/day)</span></div>
+    <div class="stat"><b>~100K/s</b><span>DB writes incl. inbox fan-out</span></div>
+    <div class="stat"><b>~200M</b><span>concurrent WebSockets</span></div>
+    <div class="stat"><b>1-2M</b><span>sockets per chat server</span></div>
+    <div class="stat"><b>30 days</b><span>max retention for undelivered</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities & API</a>
+    <a href="#hld">Architecture</a><a href="#send">Send flow</a><a href="#offline">Offline</a>
+    <a href="#media">Media</a><a href="#scale">Scaling</a><a href="#devices">Multi-device</a>
+    <a href="#fail">Failures</a><a href="#order">Ordering & last seen</a><a href="#extra">Going further</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Real systems are not designed in one go. They grow. This note follows the same path: each version solves one new problem the previous version couldn't.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>One server, two friends online</span></div>
+    <div><b>v2</b><span>Friend is offline: add an inbox</span></div>
+    <div><b>v3</b><span>Photos: move bytes to blob storage</span></div>
+    <div><b>v4</b><span>Billions of users: many servers + pub/sub</span></div>
+    <div><b>v5</b><span>Real life: many devices, dead sockets, lost messages</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>When I first looked at the final architecture, it was 15 boxes and I couldn't tell why any of them existed. Building it one problem at a time made every box earn its place: if you can't name the problem a box solves, it doesn't belong in the design.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>Requirements</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional (in scope)</h3><ul>
+      <li>Group chats, up to 100 members</li>
+      <li>Send and receive messages</li>
+      <li>Receive messages sent while offline (up to 30 days)</li>
+      <li>Send and receive media</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>&lt; 500 ms delivery for online users</li>
+      <li>Guaranteed delivery (no lost messages)</li>
+      <li>Billions of users, high throughput</li>
+      <li>Store on server only as long as needed</li>
+      <li>Survive single component failures</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Voice and video calls</li>
+      <li>Business accounts</li>
+      <li>Signup, profiles</li>
+      <li>Spam, scraping, deep security</li></ul></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>"Store only as long as necessary" is the requirement that shapes everything. WhatsApp is not a chat <em>archive</em> like Slack or Discord. The server is a delivery buffer: once every device acks, the message is gone. That is why we get an Inbox table with TTL instead of a giant history store.</p></div>
+</section>
+
+<!-- ENTITIES & API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Core entities and API</h2>
+    <p class="lede">Entities: <b>User</b>, <b>Chat</b> (2 to 100 users), <b>Message</b>, <b>Client</b> (one user, many devices). The API is a set of commands over one persistent WebSocket, not REST.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Direction</th><th>Command</th><th>Payload</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td>Client → Server</td><td><code>createChat</code></td><td>participants[], name</td><td>chatId</td></tr>
+      <tr><td>Client → Server</td><td><code>sendMessage</code></td><td>chatId, message, attachments[]</td><td>SUCCESS / FAIL, messageId</td></tr>
+      <tr><td>Client → Server</td><td><code>getAttachmentTarget</code></td><td>file hash, size</td><td>pre-signed upload URL</td></tr>
+      <tr><td>Client → Server</td><td><code>modifyChatParticipants</code></td><td>chatId, userId, ADD | REMOVE</td><td>SUCCESS / FAIL</td></tr>
+      <tr><td>Server → Client</td><td><code>newMessage</code></td><td>chatId, userId, message, attachments</td><td>client sends <b>ack</b></td></tr>
+      <tr><td>Server → Client</td><td><code>chatUpdate</code></td><td>chatId, participants[]</td><td>client sends <b>ack</b></td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Why WebSocket? Chat is high-frequency and bidirectional: the server must <em>push</em> to Bob without Bob asking. Polling wastes battery and adds latency; long-polling works but reconnects constantly. WhatsApp itself runs a custom binary protocol over TLS/TCP (derived from XMPP), but a WebSocket captures the same idea and is what most of us would build with today.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">This is where the next sections end up. It looks like a lot, so treat it as a map: come back to it after each section and you'll see where that piece fits.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 500" role="img" aria-label="High-level WhatsApp architecture">
+      <text x="95" y="30" text-anchor="middle" class="tl2">CLIENTS</text>
+      <rect x="20" y="50" width="150" height="58" rx="8" class="n"/><text x="95" y="75" text-anchor="middle" class="tl1">Alice · phone</text><text x="95" y="94" text-anchor="middle" class="tl2">WebSocket open</text>
+      <rect x="20" y="190" width="150" height="58" rx="8" class="n"/><text x="95" y="215" text-anchor="middle" class="tl1">Bob · phone</text><text x="95" y="234" text-anchor="middle" class="tl2">WebSocket open</text>
+      <rect x="20" y="280" width="150" height="58" rx="8" class="n"/><text x="95" y="305" text-anchor="middle" class="tl1">Bob · laptop</text><text x="95" y="324" text-anchor="middle" class="tl2">offline</text>
+
+      <rect x="230" y="150" width="130" height="120" rx="8" class="n"/>
+      <text x="295" y="198" text-anchor="middle" class="tl1">L4 Load</text><text x="295" y="216" text-anchor="middle" class="tl1">Balancer</text><text x="295" y="238" text-anchor="middle" class="tl2">TCP passthrough</text>
+
+      <path d="M170 79 L228 190" class="e" marker-end="url(#am)"/>
+      <path d="M170 219 L228 210" class="e" marker-end="url(#am)"/>
+      <text x="196" y="140" text-anchor="middle" class="tl2" transform="rotate(62 196 140)">WSS</text>
+
+      <text x="505" y="30" text-anchor="middle" class="tl2">STATELESS-ISH CHAT SERVERS</text>
+      <rect x="420" y="45" width="170" height="66" rx="8" class="nt"/><text x="505" y="73" text-anchor="middle" class="tl1">Chat Server 1</text><text x="505" y="92" text-anchor="middle" class="tl2">userId → socket map</text>
+      <rect x="420" y="160" width="170" height="66" rx="8" class="nt"/><text x="505" y="188" text-anchor="middle" class="tl1">Chat Server 2</text><text x="505" y="207" text-anchor="middle" class="tl2">~1-2M sockets</text>
+      <rect x="420" y="275" width="170" height="66" rx="8" class="nt"/><text x="505" y="303" text-anchor="middle" class="tl1">Chat Server N</text><text x="505" y="322" text-anchor="middle" class="tl2">hundreds of hosts</text>
+      <path d="M360 190 L418 82" class="e" marker-end="url(#am)"/>
+      <path d="M360 210 L418 195" class="e" marker-end="url(#am)"/>
+      <path d="M360 230 L418 305" class="e" marker-end="url(#am)"/>
+
+      <!-- bus -->
+      <path d="M590 78 H625 M590 193 H625 M590 308 H625 M625 70 V 420" class="e"/>
+      <rect x="660" y="30" width="190" height="110" rx="8" class="na"/>
+      <text x="755" y="62" text-anchor="middle" class="tl1">Redis Pub/Sub</text>
+      <text x="755" y="84" text-anchor="middle" class="tl2">channel per userId</text>
+      <text x="755" y="102" text-anchor="middle" class="tl2">sharded by hash(userId)</text>
+      <text x="755" y="120" text-anchor="middle" class="tl2">at-most-once, fast</text>
+      <path d="M625 85 H657" class="ea" marker-end="url(#aa)" marker-start="url(#aa)"/>
+
+      <rect x="660" y="170" width="190" height="200" rx="8" class="nb"/>
+      <text x="755" y="198" text-anchor="middle" class="tl1">DynamoDB</text>
+      <text x="680" y="224" class="tlb">Chat</text>
+      <text x="680" y="246" class="tlb">ChatParticipant (+GSI)</text>
+      <text x="680" y="268" class="tlb">Message   · TTL 30d</text>
+      <text x="680" y="290" class="tlb">Inbox     · TTL 30d</text>
+      <text x="680" y="312" class="tlb">Clients</text>
+      <text x="680" y="334" class="tlb">LastSeen</text>
+      <text x="755" y="358" text-anchor="middle" class="tl2">durable source of truth</text>
+      <path d="M625 270 H657" class="eb" marker-end="url(#ab)"/>
+
+      <rect x="660" y="400" width="190" height="66" rx="8" class="nt"/>
+      <text x="755" y="428" text-anchor="middle" class="tl1">Blob Storage (S3)</text><text x="755" y="447" text-anchor="middle" class="tl2">media · TTL 30d · opt. CDN</text>
+      <path d="M625 420 H657" class="e dash" marker-end="url(#am)"/>
+      <text x="641" y="412" text-anchor="middle" class="tl2">sign</text>
+
+      <path d="M95 338 V 452 H 657" class="et dash" marker-end="url(#at)"/>
+      <text x="380" y="444" text-anchor="middle" class="tt">clients upload / download media directly (pre-signed URL)</text>
+
+      <text x="905" y="85" class="tl2" text-anchor="middle">fast</text>
+      <text x="905" y="100" class="tl2" text-anchor="middle">path</text>
+      <text x="905" y="265" class="tl2" text-anchor="middle">durable</text>
+      <text x="905" y="280" class="tl2" text-anchor="middle">path</text>
+    </svg>
+    </div>
+    <figcaption>Two paths through the system: Redis Pub/Sub is the <b>fast path</b> (live delivery, can drop messages), DynamoDB is the <b>durable path</b> (Inbox guarantees nothing is lost). Media bytes never go through chat servers.</figcaption>
+  </figure>
+
+  <h3>Data model</h3>
+  <div class="schema">
+    <div class="tbl"><h4>Chat</h4><div><span class="k">chatId</span><small>PK</small></div><div><span>name</span></div><div><span>createdAt</span></div></div>
+    <div class="tbl"><h4>ChatParticipant</h4><div><span class="k">chatId</span><small>PK</small></div><div><span class="k">participantId</span><small>SK</small></div><div><span>GSI: participantId → chatId</span><small>"my chats"</small></div></div>
+    <div class="tbl"><h4>Message</h4><div><span class="k">messageId</span><small>PK</small></div><div><span>chatId, senderId</span></div><div><span>body / attachmentUrls</span></div><div><span>serverTs</span><small>TTL 30d</small></div></div>
+    <div class="tbl"><h4>Inbox</h4><div><span class="k">recipient clientId</span><small>PK</small></div><div><span class="k">messageId</span><small>SK</small></div><div><span>deleted on ack</span><small>TTL 30d</small></div></div>
+    <div class="tbl"><h4>Clients</h4><div><span class="k">userId</span><small>PK</small></div><div><span class="k">clientId</span><small>SK</small></div><div><span>max 3 per user</span></div></div>
+    <div class="tbl"><h4>LastSeen</h4><div><span class="k">userId</span><small>PK</small></div><div><span>lastDisconnectTs</span></div><div><span>conditional write</span></div></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Creating a chat writes the Chat row and up to 100 ChatParticipant rows. A DynamoDB transaction holds up to 100 items, so a 100-member chat sits right at the limit, so it is safer to batch the participant writes for the biggest chats. Also why an L4 balancer: WebSockets are long-lived TCP connections, we don't need L7 routing, and L4 is cheaper per connection.</p></div>
+</section>
+
+<!-- SEND FLOW -->
+<section id="send">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>Alice sends Bob a message</h2>
+    <p class="lede">Alice and Bob are connected to <b>different</b> chat servers. Follow the numbers top to bottom.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 580" role="img" aria-label="Sequence diagram of sending a message">
+      <g>
+        <rect x="15" y="16" width="110" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Alice</text>
+        <rect x="165" y="16" width="130" height="44" rx="8" class="nt"/><text x="230" y="43" text-anchor="middle" class="tl1">Chat Server A</text>
+        <rect x="340" y="16" width="120" height="44" rx="8" class="nb"/><text x="400" y="43" text-anchor="middle" class="tl1">DynamoDB</text>
+        <rect x="510" y="16" width="120" height="44" rx="8" class="na"/><text x="570" y="43" text-anchor="middle" class="tl1">Redis</text>
+        <rect x="675" y="16" width="130" height="44" rx="8" class="nt"/><text x="740" y="43" text-anchor="middle" class="tl1">Chat Server B</text>
+        <rect x="845" y="16" width="110" height="44" rx="8" class="n"/><text x="900" y="43" text-anchor="middle" class="tl1">Bob</text>
+      </g>
+      <path d="M70 60 V565 M230 60 V565 M400 60 V565 M570 60 V565 M740 60 V565 M900 60 V565" class="life"/>
+
+      <rect x="80" y="122" width="320" height="88" rx="6" fill="var(--blue-bg)" opacity=".55"/>
+      <text x="390" y="136" text-anchor="end" class="tb">durable before ack</text>
+
+      <path d="M70 100 H226" class="e" marker-end="url(#am)"/><text x="150" y="93" text-anchor="middle" class="tlb">1 sendMessage</text>
+      <path d="M230 160 H396" class="eb" marker-end="url(#ab)"/><text x="315" y="153" text-anchor="middle" class="tb">2 put Message + Inbox</text>
+      <path d="M230 198 H74" class="e dash" marker-end="url(#am)"/><text x="150" y="191" text-anchor="middle" class="tlb">3 ack ✓ sent</text>
+      <path d="M230 240 H566" class="ea" marker-end="url(#aa)"/><text x="400" y="233" text-anchor="middle" class="ta">4 PUBLISH user:bob</text>
+      <path d="M570 282 H736" class="ea" marker-end="url(#aa)"/><text x="655" y="275" text-anchor="middle" class="ta">5 to subscriber</text>
+      <path d="M740 324 H896" class="e" marker-end="url(#am)"/><text x="820" y="317" text-anchor="middle" class="tlb">6 newMessage</text>
+      <path d="M900 366 H744" class="e dash" marker-end="url(#am)"/><text x="820" y="359" text-anchor="middle" class="tlb">7 ack</text>
+      <path d="M740 408 H404" class="eb" marker-end="url(#ab)"/><text x="570" y="401" text-anchor="middle" class="tb">8 delete Inbox row</text>
+      <path d="M740 450 H574" class="ea" marker-end="url(#aa)"/><text x="655" y="443" text-anchor="middle" class="ta">9 PUBLISH user:alice</text>
+      <path d="M570 492 H234" class="ea" marker-end="url(#aa)"/><text x="400" y="485" text-anchor="middle" class="ta">10 delivery receipt</text>
+      <path d="M230 534 H74" class="e" marker-end="url(#am)"/><text x="150" y="527" text-anchor="middle" class="tlb">11 ✓✓ delivered</text>
+    </svg>
+    </div>
+    <figcaption>The key rule: <b>write to the database first, then ack the sender, then try live delivery.</b> If Redis drops step 4 or Bob's phone dies before step 7, the Inbox row is still there.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Notice the server acks Alice (single tick) <em>before</em> Bob gets anything. That decouples sender latency from recipient health. For a group of 50, step 2 writes 1 Message row plus 49 Inbox rows, and step 4 publishes to 49 channels. That fan-out is where your ~40K msg/s turns into ~100K writes/s.</p></div>
+</section>
+
+<!-- OFFLINE -->
+<section id="offline">
+  <div class="head"><span class="eyebrow">Step 5</span><h2>Bob comes back online</h2>
+    <p class="lede">While Bob was offline, steps 4 to 8 above failed silently. The Inbox kept his messages. On reconnect, Bob pulls them.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 860 340" role="img" aria-label="Offline sync sequence">
+      <rect x="25" y="16" width="110" height="44" rx="8" class="n"/><text x="80" y="43" text-anchor="middle" class="tl1">Bob · phone</text>
+      <rect x="235" y="16" width="130" height="44" rx="8" class="nt"/><text x="300" y="43" text-anchor="middle" class="tl1">Chat Server</text>
+      <rect x="460" y="16" width="120" height="44" rx="8" class="na"/><text x="520" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <rect x="680" y="16" width="120" height="44" rx="8" class="nb"/><text x="740" y="43" text-anchor="middle" class="tl1">DynamoDB</text>
+      <path d="M80 60 V325 M300 60 V325 M520 60 V325 M740 60 V325" class="life"/>
+      <path d="M80 100 H296" class="e" marker-end="url(#am)"/><text x="190" y="93" text-anchor="middle" class="tlb">1 connect (WSS)</text>
+      <path d="M300 140 H516" class="ea" marker-end="url(#aa)"/><text x="410" y="133" text-anchor="middle" class="ta">2 SUBSCRIBE user:bob</text>
+      <path d="M300 180 H736" class="eb" marker-end="url(#ab)"/><text x="520" y="173" text-anchor="middle" class="tb">3 query Inbox(bob-phone) + Messages</text>
+      <path d="M740 220 H304" class="eb dash" marker-end="url(#ab)"/><text x="520" y="213" text-anchor="middle" class="tb">4 pending messages</text>
+      <path d="M300 260 H84" class="e" marker-end="url(#am)"/><text x="190" y="253" text-anchor="middle" class="tlb">5 newMessage × N</text>
+      <path d="M80 300 H296" class="e dash" marker-end="url(#am)"/><text x="190" y="293" text-anchor="middle" class="tlb">6 ack each</text>
+      <path d="M300 300 H736" class="eb dash" marker-end="url(#ab)"/><text x="520" y="293" text-anchor="middle" class="tb">7 delete Inbox rows</text>
+    </svg>
+    </div>
+    <figcaption>Subscribe <b>before</b> reading the Inbox (step 2 before 3). The other order leaves a gap where a message published in between is missed by both paths.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>What if Bob never comes back? TTL on Message and Inbox deletes rows after 30 days for free, with no cron job. Delivery is <b>at-least-once</b> here (if the ack is lost, Bob gets the message again), so the client must dedupe by <code>messageId</code>. The short version I keep in my head: "at-least-once delivery, plus a client that ignores repeats."</p></div>
+</section>
+
+<!-- MEDIA -->
+<section id="media">
+  <div class="head"><span class="eyebrow">Step 6</span><h2>Sending a photo</h2></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Blob in the database</h3><p>DynamoDB items cap at 400 KB, and chat servers would stream every byte. Expensive and slow.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Chat server forwards to S3</h3><p>Storage is right, but chat servers still carry media bandwidth they don't need.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Client uploads directly</h3><p>Server only signs a URL. Bytes go client → S3 → client. Chat servers stay tiny.</p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 310" role="img" aria-label="Direct media upload with pre-signed URLs">
+      <rect x="20" y="115" width="150" height="70" rx="8" class="n"/><text x="95" y="146" text-anchor="middle" class="tl1">Alice</text><text x="95" y="166" text-anchor="middle" class="tl2">sender</text>
+      <rect x="360" y="20" width="180" height="70" rx="8" class="nt"/><text x="450" y="51" text-anchor="middle" class="tl1">Chat Server</text><text x="450" y="71" text-anchor="middle" class="tl2">signs URLs only</text>
+      <rect x="360" y="215" width="180" height="70" rx="8" class="nt"/><text x="450" y="246" text-anchor="middle" class="tl1">Blob Storage</text><text x="450" y="266" text-anchor="middle" class="tl2">S3 · TTL 30d</text>
+      <rect x="730" y="115" width="150" height="70" rx="8" class="n"/><text x="805" y="146" text-anchor="middle" class="tl1">Bob</text><text x="805" y="166" text-anchor="middle" class="tl2">recipient</text>
+
+      <path d="M170 125 L357 42" class="e" marker-end="url(#am)"/>
+      <path d="M360 62 L174 140" class="e dash" marker-end="url(#am)"/>
+      <path d="M170 175 L357 240" class="et" marker-end="url(#at)"/>
+      <path d="M170 155 L357 80" class="e" marker-end="url(#am)"/>
+      <path d="M540 60 L727 130" class="e" marker-end="url(#am)"/>
+      <path d="M730 170 L543 245" class="et" marker-end="url(#at)"/>
+
+      <g><circle cx="255" cy="78" r="11" class="badge"/><text x="255" y="82" text-anchor="middle" class="badget">1</text></g>
+      <g><circle cx="276" cy="104" r="11" class="badge"/><text x="276" y="108" text-anchor="middle" class="badget">2</text></g>
+      <g><circle cx="262" cy="206" r="11" class="badge"/><text x="262" y="210" text-anchor="middle" class="badget">3</text></g>
+      <g><circle cx="318" cy="96" r="11" class="badge"/><text x="318" y="100" text-anchor="middle" class="badget">4</text></g>
+      <g><circle cx="633" cy="95" r="11" class="badge"/><text x="633" y="99" text-anchor="middle" class="badget">5</text></g>
+      <g><circle cx="636" cy="207" r="11" class="badge"/><text x="636" y="211" text-anchor="middle" class="badget">6</text></g>
+    </svg>
+    </div>
+    <ol class="steps">
+      <li><code>getAttachmentTarget(hash, size)</code></li>
+      <li>Server returns a short-lived pre-signed PUT URL</li>
+      <li>Alice uploads the (encrypted) bytes straight to S3</li>
+      <li><code>sendMessage</code> with the attachment URL inside</li>
+      <li>Bob receives <code>newMessage</code> containing the URL</li>
+      <li>Bob downloads directly from S3 (or a CDN)</li>
+    </ol>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>CDN is optional here: a file is shared to at most 100 people, so the cache hit ratio is low (unlike Instagram). Open problem to mention: deleting media as soon as <em>all</em> recipients downloaded it, rather than waiting 30 days. A reference count per attachment, decremented on each ack, is one answer.</p></div>
+</section>
+
+<!-- SCALING -->
+<section id="scale">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Scaling to billions: who is on which server?</h2>
+    <p class="lede">200M concurrent sockets ÷ ~1-2M per host = hundreds of chat servers. Alice is on server 1, Bob on server 7. How does server 1 reach Bob?</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Just add servers</h3><p>The load balancer spreads connections randomly. Server 1 has no idea where Bob lives.</p></div>
+    <div class="card"><span class="tag bad">BAD</span><h3>Kafka topic per user</h3><p>~50 KB overhead per topic × 1B users ≈ 50 TB of metadata. Kafka is not built for that many topics.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Consistent hashing</h3><p>Route Bob to a fixed server by hash. Works, but rebalancing sockets on scale-up is painful.</p></div>
+  </div>
+  <div class="pair">
+    <figure class="small">
+      <div class="scroll">
+      <svg viewBox="0 0 460 360" role="img" aria-label="Consistent hashing ring">
+        <rect x="14" y="12" width="220" height="48" rx="8" class="na"/>
+        <text x="124" y="32" text-anchor="middle" class="tl1">ZooKeeper / etcd</text>
+        <text x="124" y="50" text-anchor="middle" class="tl2">ring: hash(userId) → server</text>
+        <circle cx="240" cy="200" r="115" fill="none" class="e"/>
+        <g><rect x="212" y="70" width="56" height="30" rx="6" class="nt"/><text x="240" y="90" text-anchor="middle" class="tlb">CS1</text></g>
+        <g><rect x="327" y="185" width="56" height="30" rx="6" class="nt"/><text x="355" y="205" text-anchor="middle" class="tlb">CS2</text></g>
+        <g><rect x="212" y="300" width="56" height="30" rx="6" class="nt"/><text x="240" y="320" text-anchor="middle" class="tlb">CS3</text></g>
+        <g><rect x="97" y="185" width="56" height="30" rx="6" class="nt"/><text x="125" y="205" text-anchor="middle" class="tlb">CS4</text></g>
+        <circle cx="321" cy="119" r="7" class="badge"/><text x="335" y="114" class="ta">alice</text>
+        <circle cx="321" cy="281" r="7" class="badge"/><text x="335" y="294" class="ta">bob</text>
+        <circle cx="159" cy="119" r="7" class="badge"/><text x="98" y="114" class="ta">carol</text>
+        <path d="M330 127 A 115 115 0 0 1 352 175" class="ea" marker-end="url(#aa)"/>
+        <path d="M313 290 A 115 115 0 0 1 270 312" class="ea" marker-end="url(#aa)"/>
+      </svg>
+      </div>
+      <figcaption>Each user walks clockwise to the next server. CS1 must open a direct connection to CS3 to reach Bob. Adding a server moves sockets, so you need connection draining and must avoid a reconnect thundering herd.</figcaption>
+    </figure>
+    <figure class="small">
+      <div class="scroll">
+      <svg viewBox="0 0 460 360" role="img" aria-label="Redis Pub/Sub routing">
+        <circle cx="40" cy="70" r="22" class="n"/><text x="40" y="75" text-anchor="middle" class="tlb">Alice</text>
+        <circle cx="420" cy="290" r="22" class="n"/><text x="420" y="295" text-anchor="middle" class="tlb">Bob</text>
+        <rect x="16" y="120" width="110" height="56" rx="8" class="nt"/><text x="71" y="145" text-anchor="middle" class="tl1">CS 1</text><text x="71" y="163" text-anchor="middle" class="tl2">has Alice</text>
+        <rect x="334" y="190" width="110" height="56" rx="8" class="nt"/><text x="389" y="215" text-anchor="middle" class="tl1">CS 7</text><text x="389" y="233" text-anchor="middle" class="tl2">has Bob</text>
+        <path d="M40 92 V117" class="e" marker-end="url(#am)"/>
+        <path d="M389 246 L405 270" class="e" marker-end="url(#am)"/>
+
+        <text x="230" y="24" text-anchor="middle" class="tl2">REDIS CLUSTER · shard = hash(userId)</text>
+        <rect x="170" y="36" width="120" height="64" rx="8" class="n"/><text x="230" y="62" text-anchor="middle" class="tl1">Shard A</text><text x="230" y="82" text-anchor="middle" class="tl2">user:alice …</text>
+        <rect x="170" y="140" width="120" height="74" rx="8" class="na"/><text x="230" y="166" text-anchor="middle" class="tl1">Shard B</text><text x="230" y="186" text-anchor="middle" class="ta">user:bob</text><text x="230" y="203" text-anchor="middle" class="tl2">subscribers: CS 7</text>
+        <rect x="170" y="254" width="120" height="64" rx="8" class="n"/><text x="230" y="280" text-anchor="middle" class="tl1">Shard C</text><text x="230" y="300" text-anchor="middle" class="tl2">user:carol …</text>
+
+        <path d="M126 150 L167 168" class="ea" marker-end="url(#aa)"/>
+        <text x="100" y="208" class="ta">PUBLISH</text>
+        <path d="M334 205 L293 186" class="e dash" marker-end="url(#am)"/>
+        <text x="300" y="132" class="tl2">SUBSCRIBE</text><text x="300" y="146" class="tl2">on connect</text>
+        <path d="M290 196 L331 224" class="ea" marker-end="url(#aa)"/>
+      </svg>
+      </div>
+      <figcaption><b>Great:</b> servers are decoupled. CS 7 subscribes to <code>user:bob</code> when Bob connects. CS 1 just publishes to that channel. Any server can serve any user, so the load balancer can be dumb again.</figcaption>
+    </figure>
+  </div>
+  <div class="tbox"><table>
+    <thead><tr><th>Partition channels by</th><th>Good for</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td><b>User</b> (<code>user:bob</code>)</td><td>1:1 chats, which are most of WhatsApp</td><td>A 100-person group = 99 publishes per message</td></tr>
+      <tr><td><b>Chat</b> (<code>chat:123</code>)</td><td>Large groups: 1 publish per message</td><td>Every user subscribes to every chat they're in</td></tr>
+      <tr><td><b>Hybrid</b></td><td>Chats above ~25 members use chat channels, small ones use user channels</td><td>Two code paths; solves the "celebrity" fan-out problem</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Redis Pub/Sub is <b>at-most-once</b>: if no one is subscribed, the message evaporates. That is fine, because the Inbox is the durable path. The picture that made it click for me: "Pub/Sub is the doorbell, the Inbox is the mailbox." Added latency is a few milliseconds; one Redis host has been benchmarked handling ~100K updates/s at under 30% CPU.</p></div>
+</section>
+
+<!-- MULTI-DEVICE -->
+<section id="devices">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>One user, many devices</h2></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 270" role="img" aria-label="Multi-device fan-out">
+      <rect x="20" y="100" width="120" height="60" rx="8" class="n"/><text x="80" y="135" text-anchor="middle" class="tl1">Alice</text>
+      <rect x="200" y="100" width="150" height="60" rx="8" class="nt"/><text x="275" y="127" text-anchor="middle" class="tl1">Chat Server</text><text x="275" y="146" text-anchor="middle" class="tl2">lookup Clients(bob)</text>
+      <path d="M140 130 H197" class="e" marker-end="url(#am)"/>
+
+      <rect x="420" y="20" width="200" height="130" rx="8" class="nb"/>
+      <text x="520" y="44" text-anchor="middle" class="tl1">Inbox rows</text>
+      <text x="440" y="72" class="tlb">(bob-phone,  m42)</text>
+      <text x="440" y="96" class="tlb">(bob-laptop, m42)</text>
+      <text x="440" y="120" class="tlb">(bob-web,    m42)</text>
+      <path d="M350 118 L417 90" class="eb" marker-end="url(#ab)"/>
+
+      <rect x="420" y="185" width="200" height="60" rx="8" class="na"/><text x="520" y="212" text-anchor="middle" class="tl1">PUBLISH user:bob</text><text x="520" y="231" text-anchor="middle" class="tl2">still one channel per user</text>
+      <path d="M350 145 L417 200" class="ea" marker-end="url(#aa)"/>
+
+      <rect x="720" y="20" width="160" height="50" rx="8" class="n"/><text x="800" y="50" text-anchor="middle" class="tl1">Bob · phone</text>
+      <rect x="720" y="105" width="160" height="50" rx="8" class="n"/><text x="800" y="135" text-anchor="middle" class="tl1">Bob · laptop</text>
+      <rect x="720" y="190" width="160" height="50" rx="8" class="n"/><text x="800" y="220" text-anchor="middle" class="tl1">Bob · web</text>
+      <path d="M620 205 L717 50" class="ea" marker-end="url(#aa)"/>
+      <path d="M620 212 L717 135" class="ea" marker-end="url(#aa)"/>
+      <path d="M620 220 L717 215" class="ea" marker-end="url(#aa)"/>
+    </svg>
+    </div>
+    <figcaption>Add a <b>Clients</b> table (max 3 per user). The Inbox becomes per-client, because the phone may have the message while the laptop doesn't. Each device acks and deletes only its own row.</figcaption>
+  </figure>
+</section>
+
+<!-- FAILURES -->
+<section id="fail">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>Failures: dead sockets and lost messages</h2>
+    <p class="lede">A phone enters a tunnel. TCP doesn't notice for minutes. Meanwhile the server thinks Bob is online and keeps pushing into a dead socket.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 200" role="img" aria-label="Heartbeat timeline">
+      <path d="M40 110 H860" class="e" marker-end="url(#am)"/>
+      <text x="40" y="140" text-anchor="middle" class="tl2">0s</text>
+      <text x="220" y="140" text-anchor="middle" class="tl2">10s</text>
+      <text x="400" y="140" text-anchor="middle" class="tl2">20s</text>
+      <text x="490" y="140" text-anchor="middle" class="tr">25s</text>
+      <text x="580" y="140" text-anchor="middle" class="tl2">30s</text>
+      <text x="850" y="140" text-anchor="end" class="tl2">time</text>
+      <path d="M40 104 V116 M220 104 V116 M400 104 V116 M580 104 V116" class="e"/>
+
+      <path d="M40 60 V102" class="et" marker-end="url(#at)"/><text x="40" y="52" text-anchor="middle" class="tt">ping</text>
+      <path d="M52 102 V72" class="e dash" marker-end="url(#am)"/><text x="78" y="68" class="tl2">pong</text>
+      <path d="M220 60 V102" class="et" marker-end="url(#at)"/><text x="220" y="52" text-anchor="middle" class="tt">ping</text>
+      <path d="M232 102 V72" class="e dash" marker-end="url(#am)"/><text x="258" y="68" class="tl2">pong</text>
+      <path d="M400 60 V102" class="et" marker-end="url(#at)"/><text x="400" y="52" text-anchor="middle" class="tt">ping</text>
+      <text x="425" y="82" class="tr">no pong ✕</text>
+      <rect x="400" y="96" width="90" height="10" fill="var(--red-bg)" stroke="var(--red)"/>
+      <path d="M490 150 V170" class="er"/>
+      <text x="500" y="182" class="tr">5s timeout: close socket, unsubscribe, write LastSeen</text>
+    </svg>
+    </div>
+    <figcaption>Application-level heartbeat every 10 to 30 s with a 5 s pong timeout detects a dead connection in ~15 s. Cost at 200M users / 10 s interval: ~20M tiny ping/pongs per second, spread over hundreds of servers.</figcaption>
+  </figure>
+
+  <h3>Catching messages Redis dropped</h3>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 190" role="img" aria-label="Sequence number gap detection">
+      <text x="20" y="28" class="tl2">BOB'S CLIENT (per-user sequence numbers)</text>
+      <rect x="20" y="45" width="90" height="44" rx="8" class="nt"/><text x="65" y="72" text-anchor="middle" class="tlb">seq 39</text>
+      <rect x="125" y="45" width="90" height="44" rx="8" class="nt"/><text x="170" y="72" text-anchor="middle" class="tlb">seq 40</text>
+      <rect x="230" y="45" width="90" height="44" rx="8" class="nt"/><text x="275" y="72" text-anchor="middle" class="tlb">seq 41</text>
+      <rect x="335" y="45" width="90" height="44" rx="8" class="nr dash"/><text x="380" y="72" text-anchor="middle" class="tr">42 ?</text>
+      <rect x="440" y="45" width="90" height="44" rx="8" class="nr dash"/><text x="485" y="72" text-anchor="middle" class="tr">43 ?</text>
+
+      <rect x="600" y="40" width="280" height="54" rx="8" class="na"/>
+      <text x="740" y="63" text-anchor="middle" class="tl1">heartbeat: latestSeq = 43</text>
+      <text x="740" y="82" text-anchor="middle" class="tl2">counter via Redis INCR</text>
+      <path d="M600 67 H534" class="ea" marker-end="url(#aa)"/>
+
+      <path d="M430 100 C 430 150, 280 150, 280 150" class="e" fill="none"/>
+      <rect x="20" y="130" width="500" height="44" rx="8" class="nb"/>
+      <text x="270" y="157" text-anchor="middle" class="tb">gap found → sync(after=41) reads Inbox → gets 42, 43</text>
+    </svg>
+    </div>
+    <figcaption>Piggyback the user's latest sequence number on each heartbeat. A gap is noticed within one heartbeat interval, even if no new message arrives. Production systems layer this with slow periodic polling (every 30 to 60 s) as a final backstop.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Approach</th><th>Detects loss</th><th>Weakness</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag good">GOOD</span> Periodic polling (30-60 s)</td><td>Eventually</td><td>~7M queries/s at 200M users; slow</td></tr>
+      <tr><td><span class="tag good">GOOD</span> Per-chat sequence numbers</td><td>When the next message arrives</td><td>Last message of a conversation can be silently lost</td></tr>
+      <tr><td><span class="tag great">GREAT</span> Per-user seq on heartbeat</td><td>Within one heartbeat</td><td>Needs an atomic counter per user</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ORDER / LAST SEEN -->
+<section id="order">
+  <div class="head"><span class="eyebrow">Deep dives 4 & 5</span><h2>Ordering and "last seen"</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Message order</h3><p>Don't build a distributed consensus system. Chat servers sync clocks with NTP and stamp each message on receipt. Every client sorts by that server timestamp, so all members see the <b>same</b> order. A message can occasionally land above one sent a moment later, and that is acceptable.</p></div>
+    <div class="card"><span class="tag bad">BAD</span><h3>Last seen: write every heartbeat</h3><p>200M users × every 10 s = millions of DB writes per second for a field users glance at.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Last seen: write on disconnect</h3><p>Connected means "online" (live from the socket). Only write <code>lastDisconnectTs</code> when the socket closes, with a conditional write so two servers don't race. Also write on connect for robustness if a server crashes.</p></div>
+  </div>
+</section>
+
+<!-- EXTRA -->
+<section id="extra">
+  <div class="head"><span class="eyebrow">Beyond the basics</span><h2>Going further</h2>
+    <p class="lede">Questions that came up while I studied this, answered from ByteByteGo's chat system chapter, WhatsApp's engineering talks and the Signal protocol docs.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>✓ / ✓✓ / read ticks</h3><ul>
+      <li><b>✓ sent</b>: server persisted it (step 3)</li>
+      <li><b>✓✓ delivered</b>: recipient device acked; server publishes a receipt to the sender's channel</li>
+      <li><b>Read</b>: client sends a <code>read</code> receipt when the chat is opened. Same pipeline, tiny payload</li></ul></div>
+    <div class="card"><h3>End-to-end encryption</h3><ul>
+      <li>Signal protocol: keys live on devices, server stores only ciphertext</li>
+      <li>Server keeps public key bundles so offline users can still be messaged</li>
+      <li>Groups use "sender keys" so a sender encrypts once, not per member</li>
+      <li>Consequence: no server-side search or content moderation</li></ul></div>
+    <div class="card"><h3>Message IDs</h3><ul>
+      <li>Need uniqueness + rough time order</li>
+      <li>Snowflake-style 64-bit IDs (timestamp | machine | counter)</li>
+      <li>Client also generates a local UUID for dedupe on retry</li></ul></div>
+    <div class="card"><h3>Why Erlang?</h3><ul>
+      <li>WhatsApp runs on Erlang/BEAM: millions of lightweight processes, one per connection</li>
+      <li>Famous for ~2M connections per box and a tiny engineering team</li>
+      <li>A good reminder that the right runtime can matter as much as the architecture</li></ul></div>
+    <div class="card"><h3>Archive vs relay</h3><ul>
+      <li>Slack/Discord keep history forever: Cassandra/ScyllaDB partitioned by (channel, time bucket)</li>
+      <li>WhatsApp deletes after delivery; history lives on the phone, backed up to the user's cloud</li>
+      <li>Decide which one you're building first; it changes the whole storage design</li></ul></div>
+    <div class="card"><h3>At even bigger scale</h3><ul>
+      <li>Multi-region: home region per user, cross-region pub/sub</li>
+      <li>Cell-based architecture to limit blast radius</li>
+      <li>Graceful deploys: draining 1M sockets without a reconnect storm (jittered backoff)</li></ul></div>
+  </div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2>
+    <p class="lede">Every design is a set of choices. Here are the ones that shape this system, what else was possible, and why I'd make the same call.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>WebSocket per device</b></td><td>Polling, long-polling</td><td>The server must push instantly; polling wastes battery and adds delay</td></tr>
+      <tr><td><b>Write to the inbox before delivering</b></td><td>Deliver first, store later</td><td>A message is never only in memory, so a crash can't lose it</td></tr>
+      <tr><td><b>Delete after delivery (TTL 30 days)</b></td><td>Keep full history on the server</td><td>The goal is a delivery buffer, not an archive; less data to store and protect</td></tr>
+      <tr><td><b>Clients upload media directly</b></td><td>Send bytes through chat servers</td><td>Chat servers stay small and fast; blob storage is built for big files</td></tr>
+      <tr><td><b>Redis Pub/Sub for routing</b></td><td>Consistent hashing, Kafka topic per user</td><td>Any server can serve any user; Kafka can't handle a billion topics</td></tr>
+      <tr><td><b>Channels per user (per chat for big groups)</b></td><td>Always per chat</td><td>Most chats are 1:1, so per-user means fewer subscriptions</td></tr>
+      <tr><td><b>Heartbeats + sequence numbers</b></td><td>Trust TCP, poll often</td><td>Finds dead sockets in seconds and lost messages within one heartbeat</td></tr>
+      <tr><td><b>Order by server timestamp</b></td><td>Distributed ordering</td><td>Everyone sees the same order; a rare small mix-up is acceptable</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>The server forgets on purpose</h3><p>I assumed WhatsApp keeps every message on its servers. It doesn't: once every device confirms, the message is deleted. Forgetting is a feature, and it makes the system simpler.</p></div>
+    <div class="card"><h3>Losing messages is allowed, in one place</h3><p>Redis Pub/Sub can drop a message and the design is fine with it, because the inbox already has a safe copy. Speed and safety live in two different paths.</p></div>
+    <div class="card"><h3>"Good enough" ordering</h3><p>I expected a clever algorithm for message order. The answer is a server timestamp. Choosing the simple option, and accepting its small flaw, was a lesson in itself.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Questions to check your understanding. Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why not just use a Kafka topic per user for routing?</summary><p>Kafka keeps per-topic and per-partition metadata (~50 KB each). A billion topics is ~50 TB of overhead and controller load Kafka was never built for. Kafka shines with few topics and huge throughput, the opposite shape of this problem.</p></details>
+    <details><summary>Redis Pub/Sub can drop messages. Why is that acceptable?</summary><p>Because it is only the fast path. The message is already durable in the Message and Inbox tables before we publish. If Pub/Sub drops it, the client finds the gap via sequence numbers on the next heartbeat (or reconnect) and syncs from the Inbox.</p></details>
+    <details><summary>A chat server crashes with 1.5M users on it. What happens next?</summary><p>Their sockets drop. Clients reconnect with jittered exponential backoff (avoid a thundering herd) through the L4 LB to any healthy server. That server subscribes to their channels, then reads their Inbox. Nothing is lost because nothing was only in that server's memory. LastSeen may be stale, which we accept.</p></details>
+    <details><summary>How do you make sure Bob doesn't see the same message twice?</summary><p>Delivery is at-least-once (lost ack means redelivery). Every message carries a unique <code>messageId</code>; the client keeps a set of recent IDs and drops duplicates. Idempotent receiver beats trying to guarantee exactly-once over a network.</p></details>
+    <details><summary>Group of 100 people, someone sends a message. What happens on the write path?</summary><p>1 Message row + 99 Inbox rows (×devices, up to 3 each) and up to 99 publishes. That's why groups dominate write volume. Above ~25 members, switch to a chat-level channel so it becomes 1 publish, and consider batching Inbox writes.</p></details>
+    <details><summary>Why subscribe to Redis before reading the Inbox on reconnect?</summary><p>If you read the Inbox first, a message written and published in the gap between the read and the subscribe is missed by both paths until the next sync. Subscribe first, then read; duplicates are fine because the client dedupes.</p></details>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Clients → L4 LB → chat servers</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">Redis Pub/Sub, channel per user</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">DynamoDB with Message + Inbox (TTL)</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">Direct S3 upload with pre-signed URL</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">Send flow: write → ack → publish → deliver → ack → delete</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Reconnect: subscribe, then drain Inbox</label></li>
+    <li><input type="checkbox" id="c7"><label for="c7">Heartbeat + sequence number gap detection</label></li>
+    <li><input type="checkbox" id="c8"><label for="c8">Per-client Inbox for multi-device</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p>Primary source: <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/whatsapp" target="_blank" rel="noopener">Hello Interview: Design WhatsApp</a>. Supplementary: ByteByteGo "Design a Chat System" (System Design Interview Vol. 1, ch. 12), Signal protocol documentation, WhatsApp engineering talks on Erlang. Numbers are back-of-envelope estimates for learning, not WhatsApp's published figures.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('wa-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('wa-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

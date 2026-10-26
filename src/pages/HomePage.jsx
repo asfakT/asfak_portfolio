@@ -9,6 +9,7 @@ import Research from '../components/Research/Research';
 import Achievements from '../components/Achievements/Achievements';
 import Certificates from '../components/Certificates/Certificates';
 import Blog from '../components/Blog/Blog';
+import Lab from '../components/Lab/Lab';
 import Contact from '../components/Contact/Contact';
 
 function SectionDivider() {
@@ -85,6 +86,11 @@ export default function HomePage() {
       <SectionDivider />
       <AltSection>
         <Blog />
+      </AltSection>
+
+      <SectionDivider />
+      <AltSection>
+        <Lab />
       </AltSection>
 
       <SectionDivider />

@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How LeetCode runs your code: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Run strangers' code safely: sandboxed containers, a queue, and a Redis sorted set leaderboard.">
+<title>How LeetCode runs your code | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How LeetCode runs your code</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>20 min</b> read</span></div>
+  <p class="lede">I've clicked "Submit" on online judges thousands of times, from Codeforces rounds to LeetCode contests, and never once thought about what happens next. Somewhere, a stranger's code (mine) runs on someone else's machine, gets checked against hidden tests, and updates a live leaderboard for 100,000 people. These notes rebuild that system one problem at a time.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why running untrusted code is the real problem, not storing problems</li>
+    <li>How containers are locked down so user code can't escape</li>
+    <li>Why a queue sits between "Submit" and "Accepted"</li>
+    <li>How a Redis sorted set powers a live leaderboard</li>
+    <li>How one test set works for every programming language</li>
+    <li>The back-of-envelope math for a 100k-user contest</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>100K</b><span>users in one contest</span></div>
+    <div class="stat"><b>~4,000</b><span>problems in total</span></div>
+    <div class="stat"><b>&lt; 5 s</b><span>to get your result</span></div>
+    <div class="stat"><b>10K</b><span>submissions at peak</span></div>
+    <div class="stat"><b>~1M</b><span>test cases to run at peak</span></div>
+    <div class="stat"><b>~1,667</b><span>cores to clear it in a minute</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities & API</a>
+    <a href="#hld">Architecture</a><a href="#submit">Submit flow</a><a href="#sandbox">Sandbox</a>
+    <a href="#leaderboard">Leaderboard</a><a href="#scale">Scaling</a><a href="#harness">Test harness</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts & labs</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>List and show problems from a database</span></div>
+    <div><b>v2</b><span>Run submitted code on the API server (dangerous!)</span></div>
+    <div><b>v3</b><span>Run code in locked-down containers</span></div>
+    <div><b>v4</b><span>Live leaderboard with a Redis sorted set</span></div>
+    <div><b>v5</b><span>Contest scale: queue + autoscaling workers</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>WhatsApp was about moving messages, YouTube about moving huge files. LeetCode is small by comparison: a few hundred thousand users and a few thousand problems. The hard part is different: <b>it runs code written by strangers</b>. Most decisions in this design are about doing that safely and fast.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>See a list of problems</li>
+      <li>Open a problem and code in many languages</li>
+      <li>Submit and get feedback quickly</li>
+      <li>Watch a live contest leaderboard</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Availability over consistency</li>
+      <li>User code is isolated and secure</li>
+      <li>Results within 5 seconds</li>
+      <li>Contests with 100,000 users</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Login, profiles, payments</li>
+      <li>Discussions and social features</li>
+      <li>Analytics</li>
+      <li>Backups and CI/CD</li></ul></div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">Entities: <b>Problem</b> (statement, code stubs, test cases), <b>Submission</b> (code + results), and <b>Leaderboard</b> (rankings for one contest).</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /problems?page=1&amp;limit=100</code></td><td>Page number</td><td>Short problem list: id, title, level, tags</td></tr>
+      <tr><td><code>GET /problems/:id?language=python</code></td><td>Language</td><td>Full statement + code stub for that language</td></tr>
+      <tr><td><code>POST /problems/:id/submit</code></td><td><code>code</code>, <code>language</code></td><td>A <code>submissionId</code></td></tr>
+      <tr><td><code>GET /check/:submissionId</code></td><td>Nothing</td><td>Pending, or the results per test case</td></tr>
+      <tr><td><code>GET /leaderboard/:contestId?page=1</code></td><td>Page number</td><td>Ranked users</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The submit body never contains <code>userId</code> or a timestamp. Who you are comes from your login session, and the time comes from the server. Anything the client sends can be faked, and in a contest a faked timestamp would mean a faked rank.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Keep it in view: each later section zooms into one part of it.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 490" role="img" aria-label="LeetCode architecture">
+      <rect x="20" y="190" width="150" height="80" rx="8" class="n"/><text x="95" y="222" text-anchor="middle" class="tl1">Browser</text><text x="95" y="241" text-anchor="middle" class="tl2">Monaco editor</text>
+      <rect x="220" y="190" width="150" height="80" rx="8" class="nt"/><text x="295" y="222" text-anchor="middle" class="tl1">API server</text><text x="295" y="241" text-anchor="middle" class="tl2">stateless · small</text>
+
+      <rect x="440" y="195" width="150" height="70" rx="8" class="na"/><text x="515" y="225" text-anchor="middle" class="tl1">Queue (SQS)</text><text x="515" y="244" text-anchor="middle" class="tl2">buffers spikes</text>
+
+      <rect x="660" y="30" width="300" height="260" rx="10" class="n dash"/>
+      <text x="680" y="56" class="tl2">WORKER FLEET · AUTOSCALING (ECS)</text>
+      <rect x="680" y="72" width="260" height="56" rx="8" class="nt"/><text x="810" y="96" text-anchor="middle" class="tl1">Python container</text><text x="810" y="114" text-anchor="middle" class="tl2">sandboxed · test harness</text>
+      <rect x="680" y="140" width="260" height="56" rx="8" class="nt"/><text x="810" y="164" text-anchor="middle" class="tl1">Java container</text><text x="810" y="182" text-anchor="middle" class="tl2">sandboxed · test harness</text>
+      <rect x="680" y="208" width="260" height="56" rx="8" class="nt"/><text x="810" y="232" text-anchor="middle" class="tl1">C++ container</text><text x="810" y="250" text-anchor="middle" class="tl2">sandboxed · test harness</text>
+
+      <rect x="440" y="330" width="180" height="110" rx="8" class="nb"/>
+      <text x="530" y="356" text-anchor="middle" class="tl1">DynamoDB</text>
+      <text x="456" y="380" class="tlb">Problems + test cases</text>
+      <text x="456" y="400" class="tlb">Submissions</text>
+      <text x="456" y="420" class="tlb">GSI by contestId</text>
+
+      <rect x="690" y="330" width="200" height="80" rx="8" class="na"/><text x="790" y="360" text-anchor="middle" class="tl1">Redis sorted set</text><text x="790" y="379" text-anchor="middle" class="tl2">one per contest</text><text x="790" y="395" text-anchor="middle" class="tl2">live leaderboard</text>
+
+      <path d="M170 215 H217" class="e" marker-end="url(#am)"/>
+      <path d="M220 250 H173" class="e dash" marker-end="url(#am)"/>
+      <text x="195" y="180" text-anchor="middle" class="tl2">submit</text>
+      <text x="195" y="290" text-anchor="middle" class="tl2">poll result</text>
+      <path d="M370 230 H437" class="ea" marker-end="url(#aa)"/>
+      <text x="404" y="222" text-anchor="middle" class="ta">job</text>
+      <path d="M590 230 H657" class="ea" marker-end="url(#aa)"/>
+      <path d="M260 270 L452 328" class="eb" marker-end="url(#ab)"/>
+      <text x="250" y="332" class="tb">problems, status</text>
+      <path d="M700 290 L612 328" class="eb" marker-end="url(#ab)"/>
+      <text x="610" y="305" class="tb">results</text>
+      <path d="M850 290 L820 327" class="ea" marker-end="url(#aa)"/>
+      <text x="872" y="313" class="ta">ZADD</text>
+      <path d="M295 270 V465 H790 V413" class="ea dash" marker-end="url(#aa)"/>
+      <text x="540" y="458" text-anchor="middle" class="ta">GET /leaderboard → ZRANGE (every ~5 s)</text>
+    </svg>
+    </div>
+    <figcaption>The API server stays light: it saves, queues and reads. All the heavy and risky work (running code) happens inside the worker fleet, which can grow and shrink on its own.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Problems are stored in <b>DynamoDB</b> with their test cases nested inside the same document, because the reads are simple: "give me problem 42". The problem list is small enough that a monolith API server would be fine; nothing here needs microservices.</p></div>
+</section>
+
+<!-- SUBMIT -->
+<section id="submit">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>What happens when you click Submit</h2>
+    <p class="lede">Follow the numbers. The interesting part: the server answers you right away with an ID, and the real result comes later.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 500" role="img" aria-label="Submission sequence">
+      <rect x="15" y="16" width="110" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="170" y="16" width="120" height="44" rx="8" class="nt"/><text x="230" y="43" text-anchor="middle" class="tl1">API server</text>
+      <rect x="330" y="16" width="120" height="44" rx="8" class="nb"/><text x="390" y="43" text-anchor="middle" class="tl1">DynamoDB</text>
+      <rect x="490" y="16" width="100" height="44" rx="8" class="na"/><text x="540" y="43" text-anchor="middle" class="tl1">Queue</text>
+      <rect x="630" y="16" width="140" height="44" rx="8" class="nt"/><text x="700" y="43" text-anchor="middle" class="tl1">Worker</text>
+      <rect x="810" y="16" width="110" height="44" rx="8" class="na"/><text x="865" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <path d="M70 60 V485 M230 60 V485 M390 60 V485 M540 60 V485 M700 60 V485 M865 60 V485" class="life"/>
+
+      <path d="M70 100 H226" class="e" marker-end="url(#am)"/><text x="150" y="93" text-anchor="middle" class="tlb">1 POST /submit</text>
+      <path d="M230 140 H386" class="eb" marker-end="url(#ab)"/><text x="310" y="133" text-anchor="middle" class="tb">2 save: pending</text>
+      <path d="M230 180 H536" class="ea" marker-end="url(#aa)"/><text x="385" y="173" text-anchor="middle" class="ta">3 enqueue job</text>
+      <path d="M230 220 H74" class="e dash" marker-end="url(#am)"/><text x="150" y="213" text-anchor="middle" class="tlb">4 submissionId</text>
+      <path d="M540 260 H696" class="ea" marker-end="url(#aa)"/><text x="618" y="253" text-anchor="middle" class="ta">5 pull job</text>
+      <rect x="706" y="280" width="150" height="34" rx="6" class="nt"/><text x="781" y="302" text-anchor="middle" class="tlb">6 run tests in sandbox</text>
+      <path d="M700 340 H394" class="eb" marker-end="url(#ab)"/><text x="545" y="333" text-anchor="middle" class="tb">7 save results</text>
+      <path d="M700 380 H861" class="ea" marker-end="url(#aa)"/><text x="782" y="373" text-anchor="middle" class="ta">8 ZADD score</text>
+      <path d="M70 420 H226" class="e" marker-end="url(#am)"/><text x="150" y="413" text-anchor="middle" class="tlb">9 GET /check/:id</text>
+      <path d="M230 460 H74" class="e dash" marker-end="url(#am)"/><text x="150" y="453" text-anchor="middle" class="tlb">10 Accepted ✓</text>
+    </svg>
+    </div>
+    <figcaption>Step 9 repeats about once a second until the result is ready. Open the network tab during a LeetCode submission and you can see exactly this polling.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Running code can take seconds, and an HTTP request that waits that long ties up the server. So submission is a <b>long-running task</b>: accept it, give back an ID, do the work in the background, and let the client ask "done yet?". It's the same pattern as video processing in the YouTube design.</p></div>
+</section>
+
+<!-- SANDBOX -->
+<section id="sandbox">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Running a stranger's code safely</h2>
+    <p class="lede">Version 2 ran code directly on the API server. One <code>while(true)</code> or one <code>rm -rf /</code> later, the whole site is down, or worse, someone is mining crypto on our machines.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Run it on the API server</h3><p>Data can be destroyed or stolen, CPU gets eaten, and one crash takes down the site for everyone.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Virtual machine</h3><p>Very strong isolation with its own OS, but slow to start and heavy on resources for a 2-second job.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Container (Docker)</h3><p>Starts fast and is reused per language. It shares the host kernel, so it must be locked down carefully. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 290" role="img" aria-label="Layers of container hardening">
+      <rect x="20" y="16" width="860" height="258" rx="12" class="n"/>
+      <text x="40" y="40" class="tl1">No network access</text><text x="210" y="40" class="tl2">VPC security groups and NACLs block all traffic</text>
+      <rect x="60" y="56" width="780" height="198" rx="10" class="nb"/>
+      <text x="80" y="80" class="tl1">seccomp</text><text x="160" y="80" class="tl2">only a short list of safe system calls is allowed</text>
+      <rect x="100" y="96" width="700" height="138" rx="10" class="na"/>
+      <text x="120" y="120" class="tl1">CPU + memory limits · 5 s timeout</text><text x="390" y="120" class="tl2">container is killed if it goes over</text>
+      <rect x="140" y="136" width="620" height="78" rx="10" class="nt"/>
+      <text x="450" y="168" text-anchor="middle" class="tl1">The user's code</text>
+      <text x="450" y="190" text-anchor="middle" class="tl2">read-only filesystem · temporary output folder deleted after the run</text>
+    </svg>
+    </div>
+    <figcaption>Defense in layers: if the code gets past one wall, the next one stops it. The 5-second timeout also handles infinite loops and keeps the 5-second result target.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why not serverless?</span>
+    <p>AWS Lambda is also a great option: it isolates and scales automatically. But it can have cold starts, which hurt a 5-second target, and it has resource limits. With steady, predictable traffic, a fleet of warm containers is the simpler fit.</p></div>
+</section>
+
+<!-- LEADERBOARD -->
+<section id="leaderboard">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>A live leaderboard for 100,000 people</h2>
+    <p class="lede">A contest is 90 minutes and 10 problems. Rank = problems solved, and ties go to whoever finished faster.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Query the database on every refresh</h3><p>100k users refreshing every 5 seconds, each one sorting about a million submissions. The database melts.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Cache, refreshed every 30 s</h3><p>Much less load, but the board can be 30 seconds stale, which feels broken in the last minutes of a contest.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Redis sorted set</h3><p>Update the user's score the moment a submission is accepted. Reading the top 1,000 is instant. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Redis sorted set leaderboard">
+      <rect x="20" y="40" width="230" height="60" rx="8" class="nt"/><text x="135" y="66" text-anchor="middle" class="tl1">Worker</text><text x="135" y="85" text-anchor="middle" class="tl2">submission accepted</text>
+      <rect x="20" y="150" width="230" height="64" rx="8" class="n"/><text x="135" y="174" text-anchor="middle" class="tlb">ZADD contest:42</text><text x="135" y="194" text-anchor="middle" class="tlb">score  userId</text>
+      <path d="M135 100 V147" class="e" marker-end="url(#am)"/>
+      <path d="M250 182 H307" class="ea" marker-end="url(#aa)"/>
+
+      <rect x="310" y="20" width="340" height="260" rx="10" class="na"/>
+      <text x="330" y="46" class="tl1">contest:42 (sorted by score)</text>
+      <text x="330" y="80" class="tlb">1</text><text x="355" y="80" class="tlb">alice</text><rect x="430" y="68" width="200" height="16" rx="3" fill="var(--accent)" opacity=".85"/>
+      <text x="330" y="114" class="tlb">2</text><text x="355" y="114" class="tlb">bob</text><rect x="430" y="102" width="180" height="16" rx="3" fill="var(--accent)" opacity=".7"/>
+      <text x="330" y="148" class="tlb">3</text><text x="355" y="148" class="tlb">asfak</text><rect x="430" y="136" width="176" height="16" rx="3" fill="var(--accent)" opacity=".7"/>
+      <text x="330" y="182" class="tlb">4</text><text x="355" y="182" class="tlb">dina</text><rect x="430" y="170" width="150" height="16" rx="3" fill="var(--accent)" opacity=".55"/>
+      <text x="330" y="216" class="tlb">5</text><text x="355" y="216" class="tlb">rafi</text><rect x="430" y="204" width="120" height="16" rx="3" fill="var(--accent)" opacity=".45"/>
+      <text x="330" y="256" class="tl2">… 100,000 members, always kept in order</text>
+
+      <rect x="700" y="120" width="180" height="64" rx="8" class="n"/><text x="790" y="146" text-anchor="middle" class="tl1">Browser</text><text x="790" y="165" text-anchor="middle" class="tl2">polls every ~5 s</text>
+      <path d="M700 152 H653" class="ea" marker-end="url(#aa)"/>
+      <text x="700" y="108" class="ta">ZRANGE … REV</text>
+    </svg>
+    </div>
+    <figcaption>A sorted set keeps members ordered by score on every insert, so "top 1,000" is a cheap read. One common trick for the tie-break is to pack both values into one score, for example solved × 10,000,000 minus finish time in seconds. Users are made up.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why not WebSockets?</span>
+    <p>WebSockets would push changes instantly, and they were the right call for WhatsApp. Here a 5-second delay is fine and 100k users is modest, so simple polling is enough. A nice touch: poll every 2 seconds in the final minutes and every 10 seconds otherwise.</p></div>
+</section>
+
+<!-- SCALE -->
+<section id="scale">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>Surviving the contest rush</h2>
+    <p class="lede">When a contest starts, submissions spike. A quick estimate shows how much compute that really means.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 190" role="img" aria-label="Back of envelope compute estimate">
+      <rect x="20" y="30" width="140" height="74" rx="8" class="n"/><text x="90" y="62" text-anchor="middle" class="tl1">10,000</text><text x="90" y="82" text-anchor="middle" class="tl2">submissions at peak</text>
+      <text x="180" y="72" text-anchor="middle" class="tl1">×</text>
+      <rect x="200" y="30" width="140" height="74" rx="8" class="n"/><text x="270" y="62" text-anchor="middle" class="tl1">100</text><text x="270" y="82" text-anchor="middle" class="tl2">test cases each</text>
+      <text x="360" y="72" text-anchor="middle" class="tl1">×</text>
+      <rect x="380" y="30" width="140" height="74" rx="8" class="n"/><text x="450" y="62" text-anchor="middle" class="tl1">100 ms</text><text x="450" y="82" text-anchor="middle" class="tl2">per test (worst)</text>
+      <text x="540" y="72" text-anchor="middle" class="tl1">=</text>
+      <rect x="560" y="30" width="140" height="74" rx="8" class="nb"/><text x="630" y="62" text-anchor="middle" class="tl1">100,000</text><text x="630" y="82" text-anchor="middle" class="tl2">CPU-seconds</text>
+      <text x="720" y="72" text-anchor="middle" class="tl1">→</text>
+      <rect x="740" y="30" width="140" height="74" rx="8" class="na"/><text x="810" y="62" text-anchor="middle" class="tl1">~1,667</text><text x="810" y="82" text-anchor="middle" class="tl2">cores for 1 minute</text>
+      <text x="450" y="148" text-anchor="middle" class="tl2">one core would need 27+ hours · the biggest single machine has only a few hundred cores</text>
+    </svg>
+    </div>
+    <figcaption>Typical tests take 10 to 50 ms, so the real number is lower, but the conclusion holds: one big machine can't do this. We need many machines.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Option</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Bigger machines (vertical)</td><td><span class="tag bad">BAD</span></td><td>Hits a ceiling, and pays for idle power between contests</td></tr>
+      <tr><td>Autoscaling containers</td><td><span class="tag great">GREAT</span></td><td>Add workers when busy, remove them after (ECS Auto Scaling)</td></tr>
+      <tr><td>Autoscaling + queue</td><td><span class="tag great">GREAT</span></td><td>The queue absorbs the spike and retries if a container dies. <b>Chosen.</b></td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Contests are scheduled, so the rush is predictable. You can also <b>pre-scale</b>: start extra containers a few minutes before the contest begins, instead of waiting for autoscaling to react.</p></div>
+</section>
+
+<!-- HARNESS -->
+<section id="harness">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>One test set, every language</h2>
+    <p class="lede">Writing test cases separately for Python, Java and C++ would triple the work and invite mistakes. Instead, tests are written once in a neutral format.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="Language test harness">
+      <rect x="20" y="88" width="210" height="84" rx="8" class="nb"/>
+      <text x="125" y="114" text-anchor="middle" class="tl1">One test case</text>
+      <text x="125" y="138" text-anchor="middle" class="tlb">[3,9,20,null,null,15,7]</text>
+      <text x="125" y="158" text-anchor="middle" class="tl2">expected: 3</text>
+
+      <rect x="300" y="24" width="230" height="56" rx="8" class="nt"/><text x="415" y="48" text-anchor="middle" class="tl1">Python harness</text><text x="415" y="66" text-anchor="middle" class="tl2">array → TreeNode</text>
+      <rect x="300" y="102" width="230" height="56" rx="8" class="nt"/><text x="415" y="126" text-anchor="middle" class="tl1">Java harness</text><text x="415" y="144" text-anchor="middle" class="tl2">array → TreeNode</text>
+      <rect x="300" y="180" width="230" height="56" rx="8" class="nt"/><text x="415" y="204" text-anchor="middle" class="tl1">C++ harness</text><text x="415" y="222" text-anchor="middle" class="tl2">array → TreeNode</text>
+      <path d="M230 120 L297 52 M230 130 H297 M230 140 L297 208" class="e" marker-end="url(#am)"/>
+
+      <rect x="600" y="98" width="130" height="64" rx="8" class="n"/><text x="665" y="124" text-anchor="middle" class="tl1">Call user's</text><text x="665" y="144" text-anchor="middle" class="tlb">maxDepth()</text>
+      <path d="M530 52 L597 118 M530 130 H597 M530 208 L597 142" class="e" marker-end="url(#am)"/>
+      <rect x="770" y="98" width="110" height="64" rx="8" class="na"/><text x="825" y="124" text-anchor="middle" class="tl1">Compare</text><text x="825" y="144" text-anchor="middle" class="tl2">3 == 3 ✓</text>
+      <path d="M730 130 H767" class="e" marker-end="url(#am)"/>
+    </svg>
+    </div>
+    <figcaption>The tree is stored as a level-order (BFS) array. Each language's harness rebuilds a real tree from it, calls the user's function, and compares the answer. Only the chosen language's harness runs.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The hard part is agreeing on <b>serialization</b>: how a tree, a linked list or a graph is written as plain data. Once every harness understands the same format, adding a new language means writing one harness, not rewriting 4,000 problems.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>Hardened Docker containers</b></td><td>API server, VMs, serverless</td><td>Fast to start, reusable, safe enough with limits, no network and seccomp</td></tr>
+      <tr><td><b>Queue between API and workers</b></td><td>Call containers directly</td><td>Absorbs contest spikes, retries failed runs, no lost submissions</td></tr>
+      <tr><td><b>Client polls for results</b></td><td>Keep the request open</td><td>Keeps the API server free; simple to build</td></tr>
+      <tr><td><b>Redis sorted set leaderboard</b></td><td>Query the DB, periodic cache</td><td>Always sorted, instant top-N, almost no DB load</td></tr>
+      <tr><td><b>Polling, not WebSockets</b></td><td>WebSockets</td><td>A 5-second delay is fine; much simpler</td></tr>
+      <tr><td><b>Autoscaling + pre-scaling</b></td><td>Bigger machines</td><td>Contests need ~1,667 cores briefly, then almost none</td></tr>
+      <tr><td><b>One test set + per-language harness</b></td><td>Tests per language</td><td>Write tests once; new languages are cheap to add</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>"Pending" is a queue</h3><p>That "Pending..." I've stared at during contests is literally my job waiting in a queue, while my browser asks "done yet?" every second.</p></div>
+    <div class="card"><h3>Polling won</h3><p>After WhatsApp, I expected WebSockets everywhere. Here plain polling is the better choice, because a few seconds of delay costs nothing.</p></div>
+    <div class="card"><h3>The hidden hard part</h3><p>I thought sandboxing would be the hardest problem. Making one test case work identically in every language turned out to be just as tricky.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why not run the code on the API server?</summary><p>User code is untrusted. It could delete or steal data, mine crypto, attack other sites, or simply loop forever and eat the CPU. And if it crashes the server, every user is affected. Isolation in a separate sandbox is required.</p></details>
+    <details><summary>A user submits <code>while(true){}</code>. What stops it?</summary><p>The container's 5-second timeout kills it, and CPU limits stop it from slowing other jobs in the meantime. The submission is marked "Time Limit Exceeded".</p></details>
+    <details><summary>Why add a queue if the workers can autoscale anyway?</summary><p>Autoscaling takes time to react. The queue holds submissions safely during the spike, and if a container crashes mid-run, the job can be retried instead of lost.</p></details>
+    <details><summary>Why is a Redis sorted set better than caching the leaderboard every 30 seconds?</summary><p>The sorted set updates on every accepted submission and keeps itself in order, so reads are both fresh and cheap. A periodic cache is either stale or puts load back on the database.</p></details>
+    <details><summary>Why not let the client send its own timestamp with the submission?</summary><p>Anything the client sends can be changed. A faked earlier time would win tie-breaks. The server records the time itself.</p></details>
+    <details><summary>How do you add Rust as a new language?</summary><p>Build a Rust container image and write one Rust harness that reads the shared test format (arrays for trees, and so on). No existing test cases change.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>Containers and sandboxing (seccomp)</li>
+      <li>Long-running tasks + polling</li>
+      <li>Message queue (SQS) and retries</li>
+      <li>Autoscaling (ECS)</li>
+      <li>Redis sorted sets</li>
+      <li>Polling vs WebSockets</li>
+      <li>DynamoDB and secondary indexes</li>
+      <li>Serialization formats</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">Run untrusted Python with <code>--network none --memory 256m --cpus 0.5 --read-only</code> and a timeout</label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Submit an infinite loop and watch the timeout kill it</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Build a leaderboard with Redis <code>ZADD</code> and <code>ZRANGE … REV</code></label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">API + Redis queue + 2 workers; submit and poll for the result</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Write a tiny harness that turns <code>[3,9,20,null,null,15,7]</code> into a tree</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Browser → API → queue → worker containers</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The 10-step submit flow with polling</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">The four layers of the sandbox</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">Redis sorted set leaderboard (ZADD, ZRANGE)</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">The 1,667-core estimate</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">One test set → per-language harness</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/leetcode" target="_blank" rel="noopener">Hello Interview's LeetCode breakdown</a>, plus Docker's docs on resource limits and the Redis sorted set docs. The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('lc-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('lc-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

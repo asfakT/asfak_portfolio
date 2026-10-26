@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How a distributed rate limiter works: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="A shared token bucket in Redis, checked atomically with Lua, at the API gateway.">
+<title>How a distributed rate limiter works | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How a distributed rate limiter works</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>20 min</b> read</span></div>
+  <p class="lede">Every API I've built has a line like <code>throttle:60,1</code> in it, and I always treated it as magic. Then I asked: what if the API runs on 50 servers and gets a million requests a second? A counter on one machine stops working. These notes rebuild a rate limiter that works across many servers, one problem at a time.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why per-server counters give the wrong answer</li>
+    <li>Where the limiter should live in your system</li>
+    <li>Five rate limiting algorithms and when each one fits</li>
+    <li>How a token bucket works, step by step</li>
+    <li>Why two requests can steal the same token, and how Lua fixes it</li>
+    <li>Scaling to 1M checks per second, and what to do when Redis is down</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>1M/s</b><span>requests to check</span></div>
+    <div class="stat"><b>100M</b><span>daily active users</span></div>
+    <div class="stat"><b>&lt; 10 ms</b><span>added per request</span></div>
+    <div class="stat"><b>100-200K</b><span>Redis ops/s per instance</span></div>
+    <div class="stat"><b>~10</b><span>Redis shards needed</span></div>
+    <div class="stat"><b>16,384</b><span>hash slots in Redis Cluster</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities & interface</a>
+    <a href="#where">Where it lives</a><a href="#algo">Algorithms</a><a href="#bucket">Token bucket</a>
+    <a href="#race">Race condition</a><a href="#response">The 429 response</a><a href="#scale">Scaling</a>
+    <a href="#fail">When Redis fails</a><a href="#more">Latency, hot keys, rules</a><a href="#decisions">Decisions</a>
+    <a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts & labs</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one got wrong.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>A counter inside each app server</span></div>
+    <div><b>v2</b><span>Limiter in the API gateway, state in Redis</span></div>
+    <div><b>v3</b><span>Token bucket instead of simple counters</span></div>
+    <div><b>v4</b><span>Lua script so concurrent requests can't cheat</span></div>
+    <div><b>v5</b><span>Redis Cluster, replicas, fail-closed, pushed rules</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>This is a smaller system than WhatsApp or YouTube, but it sits in front of everything. If it is slow, every request is slow; if it is down, the whole API may be down. So every decision here is judged by two numbers: under 10 ms, and always available.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>Identify clients by user ID, IP or API key</li>
+      <li>Apply rules like "100 requests per minute per user"</li>
+      <li>Reject extra requests with 429 and helpful headers</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Under 10 ms added per request</li>
+      <li>Highly available; eventual consistency is fine</li>
+      <li>1M requests/second, 100M daily users</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Analytics on rate limit data</li>
+      <li>Keeping the data long term</li>
+      <li>Perfect consistency across all nodes</li></ul></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>"Eventual consistency is fine" is a big relief. If a user sometimes gets 101 requests instead of 100, nothing breaks. That small allowance is what makes a fast, distributed design possible.</p></div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and interface</h2>
+    <p class="lede">Entities: <b>Rule</b> (the limit, who it applies to, which endpoints), <b>Client</b> (user, IP or API key, plus its usage state), and <b>Request</b> (who, which endpoint, when).</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Interface</th><th>Returns</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td><code>isRequestAllowed(clientId, ruleId)</code></td><td><code>passes</code>, <code>remaining</code>, <code>resetTime</code></td><td>Allow or reject, and fill the response headers</td></tr>
+    </tbody></table></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Client type</th><th>Where it comes from</th><th>Watch out for</th></tr></thead>
+    <tbody>
+      <tr><td><b>User ID</b></td><td>The JWT in the <code>Authorization</code> header</td><td>Only works for logged-in users</td></tr>
+      <tr><td><b>IP address</b></td><td><code>X-Forwarded-For</code></td><td>A whole office or campus can share one IP (NAT)</td></tr>
+      <tr><td><b>API key</b></td><td><code>X-API-Key</code></td><td>Best for developer APIs</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Real systems layer several rules at once: per user, per IP, per endpoint, and a global limit. When more than one applies, the strictest one wins.</p></div>
+</section>
+
+<!-- WHERE -->
+<section id="where">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>Where the limiter lives</h2></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Inside each app server</h3><p>With 10 servers, each sees only a tenth of a user's traffic. A limit of 100 quietly becomes about 1,000.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>A separate service</h3><p>Accurate, but every request pays an extra network hop and the service becomes one more thing that can fail.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>In the API gateway</h3><p>Bad traffic is stopped at the front door before it touches any backend. State is shared through Redis. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 430" role="img" aria-label="Rate limiter architecture">
+      <rect x="20" y="180" width="150" height="80" rx="8" class="n"/><text x="95" y="212" text-anchor="middle" class="tl1">Clients</text><text x="95" y="231" text-anchor="middle" class="tl2">user · IP · API key</text>
+      <rect x="230" y="160" width="200" height="120" rx="8" class="nt"/><text x="330" y="194" text-anchor="middle" class="tl1">API gateway</text><text x="330" y="216" text-anchor="middle" class="tl2">1 identify the client</text><text x="330" y="234" text-anchor="middle" class="tl2">2 find matching rules</text><text x="330" y="252" text-anchor="middle" class="tl2">3 check the bucket</text>
+      <rect x="530" y="30" width="210" height="100" rx="8" class="na"/><text x="635" y="62" text-anchor="middle" class="tl1">Redis Cluster</text><text x="635" y="82" text-anchor="middle" class="tl2">one token bucket per client</text><text x="635" y="100" text-anchor="middle" class="tl2">~10 shards + replicas</text>
+      <rect x="530" y="180" width="210" height="80" rx="8" class="n"/><text x="635" y="212" text-anchor="middle" class="tl1">Backend services</text><text x="635" y="231" text-anchor="middle" class="tl2">only allowed requests</text>
+      <rect x="530" y="320" width="210" height="70" rx="8" class="nb"/><text x="635" y="349" text-anchor="middle" class="tl1">Rules config</text><text x="635" y="368" text-anchor="middle" class="tl2">ZooKeeper pushes changes</text>
+
+      <path d="M170 205 H227" class="e" marker-end="url(#am)"/><text x="198" y="196" text-anchor="middle" class="tl2">request</text>
+      <path d="M430 180 L527 105" class="ea" marker-end="url(#aa)"/><text x="470" y="140" text-anchor="end" class="ta">Lua: check + take</text>
+      <path d="M430 220 H527" class="et" marker-end="url(#at)"/><text x="478" y="212" text-anchor="middle" class="tt">allowed</text>
+      <path d="M530 350 L433 272" class="eb" marker-end="url(#ab)"/><text x="455" y="330" text-anchor="middle" class="tb">rules</text>
+      <path d="M230 250 H173" class="er dash" marker-end="url(#ar)"/><text x="200" y="285" text-anchor="middle" class="tr">429 + headers</text>
+    </svg>
+    </div>
+    <figcaption>Every gateway reads and writes the same buckets in Redis, so it doesn't matter which gateway a request lands on. Rejected requests get a 429 right away and never reach the backend.</figcaption>
+  </figure>
+</section>
+
+<!-- ALGORITHMS -->
+<section id="algo">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>Five ways to count</h2>
+    <p class="lede">The algorithm decides how "100 requests per minute" is actually measured.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Algorithm</th><th>How it works</th><th>Good</th><th>Weak spot</th></tr></thead>
+    <tbody>
+      <tr><td><b>Fixed window</b></td><td>Count requests per minute; reset to 0 at each new minute</td><td>Very simple: one counter</td><td>Bursts at the boundary (see below)</td></tr>
+      <tr><td><b>Sliding window log</b></td><td>Store every request's timestamp; count the ones in the last minute</td><td>Perfectly accurate</td><td>Memory: ~1,000 timestamps per user at 1,000 req/min</td></tr>
+      <tr><td><b>Sliding window counter</b></td><td>Current + previous window counts, previous weighted by time passed</td><td>Accurate enough, 2 counters</td><td>An approximation; fiddly math</td></tr>
+      <tr><td><b>Token bucket</b></td><td>A bucket refills tokens at a steady rate; each request takes one</td><td>Allows bursts, small state, used by Stripe</td><td>Capacity and refill rate need tuning</td></tr>
+      <tr><td><b>Leaky bucket</b></td><td>Requests drain out of a queue at a fixed rate</td><td>Very smooth output</td><td>No bursts; queued requests wait</td></tr>
+    </tbody></table></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 240" role="img" aria-label="Fixed window boundary burst">
+      <text x="20" y="26" class="tl1">The fixed window problem: limit is 100 per minute</text>
+      <rect x="60" y="60" width="390" height="120" rx="6" class="n"/>
+      <rect x="450" y="60" width="390" height="120" rx="6" class="n"/>
+      <text x="255" y="82" text-anchor="middle" class="tl2">window 12:00 to 12:01</text>
+      <text x="645" y="82" text-anchor="middle" class="tl2">window 12:01 to 12:02</text>
+      <rect x="418" y="100" width="26" height="80" rx="3" fill="var(--red)" opacity=".75"/>
+      <rect x="456" y="100" width="26" height="80" rx="3" fill="var(--red)" opacity=".75"/>
+      <text x="380" y="140" text-anchor="end" class="tlb">100 at 12:00:59</text>
+      <text x="492" y="140" class="tlb">100 at 12:01:00</text>
+      <path d="M418 52 V44 H482 V52" class="er"/>
+      <text x="450" y="36" text-anchor="middle" class="tr">200 requests in about 2 seconds, and both windows say "OK"</text>
+      <text x="60" y="206" class="tl2">12:00</text><text x="450" y="206" text-anchor="middle" class="tl2">12:01</text><text x="840" y="206" text-anchor="end" class="tl2">12:02</text>
+    </svg>
+    </div>
+    <figcaption>Each window only counts its own requests, so a client can send a full limit at the end of one window and another full limit at the start of the next.</figcaption>
+  </figure>
+</section>
+
+<!-- BUCKET -->
+<section id="bucket">
+  <div class="head"><span class="eyebrow">Step 5</span><h2>The token bucket, step by step</h2>
+    <p class="lede">A bucket holds up to 100 tokens and refills 10 tokens per minute. A quiet user can burst 100 requests at once, then settles to about 10 per minute.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 270" role="img" aria-label="Token bucket">
+      <rect x="20" y="110" width="170" height="60" rx="8" class="n"/><text x="105" y="136" text-anchor="middle" class="tl1">Request</text><text x="105" y="155" text-anchor="middle" class="tl2">needs 1 token</text>
+      <path d="M190 140 H327" class="e" marker-end="url(#am)"/>
+      <path d="M330 70 V220 Q330 240 350 240 H530 Q550 240 550 220 V70" class="e" style="stroke-width:2.5"/>
+      <circle cx="370" cy="215" r="11" fill="var(--accent)"/><circle cx="398" cy="215" r="11" fill="var(--accent)"/><circle cx="426" cy="215" r="11" fill="var(--accent)"/><circle cx="454" cy="215" r="11" fill="var(--accent)"/><circle cx="482" cy="215" r="11" fill="var(--accent)"/><circle cx="510" cy="215" r="11" fill="var(--accent)"/>
+      <circle cx="384" cy="190" r="11" fill="var(--accent)"/><circle cx="412" cy="190" r="11" fill="var(--accent)"/><circle cx="440" cy="190" r="11" fill="var(--accent)"/><circle cx="468" cy="190" r="11" fill="var(--accent)"/><circle cx="496" cy="190" r="11" fill="var(--accent)"/>
+      <text x="440" y="120" text-anchor="middle" class="tl1">tokens left</text>
+      <text x="440" y="140" text-anchor="middle" class="tl2">capacity 100</text>
+      <path d="M440 20 V62" class="et" marker-end="url(#at)"/>
+      <text x="452" y="36" class="tt">+10 tokens per minute (refill)</text>
+      <rect x="640" y="60" width="240" height="60" rx="8" class="nt"/><text x="760" y="86" text-anchor="middle" class="tl1">Token available</text><text x="760" y="105" text-anchor="middle" class="tl2">take 1 · forward request</text>
+      <rect x="640" y="170" width="240" height="60" rx="8" class="nr"/><text x="760" y="196" text-anchor="middle" class="tl1">Bucket empty</text><text x="760" y="215" text-anchor="middle" class="tl2">reject with 429</text>
+      <path d="M550 120 L637 92" class="et" marker-end="url(#at)"/>
+      <path d="M550 180 L637 198" class="er" marker-end="url(#ar)"/>
+    </svg>
+    </div>
+    <figcaption>Redis only stores two numbers per client: <code>tokens</code> and <code>last_refill</code>. Refill is calculated on each request from the time passed, so nothing runs in the background. An <code>EXPIRE</code> of one hour deletes buckets of clients who went quiet.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Real users are bursty: open an app, it fires 20 requests at once, then nothing. The token bucket allows that burst while still enforcing a steady long-term rate. Fixed windows punish it unfairly, and leaky buckets slow it down.</p></div>
+</section>
+
+<!-- RACE -->
+<section id="race">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Two requests, one token</h2>
+    <p class="lede">My first version read the bucket, did the math in the gateway, then wrote it back. Under load, that breaks.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Race condition between two gateways">
+      <rect x="90" y="16" width="140" height="44" rx="8" class="nt"/><text x="160" y="43" text-anchor="middle" class="tl1">Gateway A</text>
+      <rect x="390" y="16" width="120" height="44" rx="8" class="na"/><text x="450" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <rect x="670" y="16" width="140" height="44" rx="8" class="nt"/><text x="740" y="43" text-anchor="middle" class="tl1">Gateway B</text>
+      <path d="M160 60 V290 M450 60 V290 M740 60 V290" class="life"/>
+      <path d="M160 100 H446" class="e" marker-end="url(#am)"/><text x="305" y="93" text-anchor="middle" class="tlb">read → tokens = 1</text>
+      <path d="M740 135 H454" class="e" marker-end="url(#am)"/><text x="595" y="128" text-anchor="middle" class="tlb">read → tokens = 1</text>
+      <path d="M160 175 H446" class="e" marker-end="url(#am)"/><text x="305" y="168" text-anchor="middle" class="tlb">write 0 · allow ✓</text>
+      <path d="M740 210 H454" class="e" marker-end="url(#am)"/><text x="595" y="203" text-anchor="middle" class="tlb">write 0 · allow ✓</text>
+      <rect x="250" y="236" width="400" height="44" rx="8" class="nr"/><text x="450" y="263" text-anchor="middle" class="tr">Both allowed: 2 requests passed with 1 token</text>
+    </svg>
+    </div>
+    <figcaption>Both gateways read before either one writes, so both see a token that only one of them should get.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Read, then transaction</h3><p><code>MULTI/EXEC</code> makes the write atomic, but the read happened outside it. The race is still there.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>One Lua script</h3><p>Read, refill, check and take the token inside a single Lua script. Redis runs a script all at once, so no other request can sneak in between. <b>Chosen.</b></p></div>
+    <div class="card"><h3>Bonus</h3><p>The script also saves a round trip: one call to Redis instead of a read and a write, which helps the 10 ms budget.</p></div>
+  </div>
+</section>
+
+<!-- RESPONSE -->
+<section id="response">
+  <div class="head"><span class="eyebrow">Step 6</span><h2>Saying no politely</h2>
+    <p class="lede">When a request is rejected, return immediately. Don't queue it: queues use memory, trigger retries and make latency unpredictable.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Header</th><th>Example</th><th>Tells the client</th></tr></thead>
+    <tbody>
+      <tr><td><code>HTTP 429</code></td><td>Too Many Requests</td><td>You hit a limit</td></tr>
+      <tr><td><code>X-RateLimit-Limit</code></td><td>100</td><td>The limit for this rule</td></tr>
+      <tr><td><code>X-RateLimit-Remaining</code></td><td>0</td><td>Requests left right now</td></tr>
+      <tr><td><code>X-RateLimit-Reset</code></td><td>1793010000</td><td>When it resets (Unix time)</td></tr>
+      <tr><td><code>Retry-After</code></td><td>30</td><td>Seconds to wait before trying again</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SCALE -->
+<section id="scale">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>1M checks per second</h2>
+    <p class="lede">One Redis instance does about 100k to 200k operations a second. Each check needs about 2 operations, so one instance handles 50k to 100k checks. For 1M checks a second we need about 10 shards.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 270" role="img" aria-label="Redis Cluster sharding">
+      <rect x="20" y="70" width="190" height="120" rx="8" class="n"/>
+      <text x="115" y="96" text-anchor="middle" class="tl1">Bucket keys</text>
+      <text x="40" y="124" class="tlb">rl:user:42</text><text x="40" y="146" class="tlb">rl:ip:103.4.9.1</text><text x="40" y="168" class="tlb">rl:key:abc123</text>
+      <rect x="260" y="95" width="200" height="70" rx="8" class="na"/><text x="360" y="123" text-anchor="middle" class="tl1">CRC16(key) mod 16384</text><text x="360" y="143" text-anchor="middle" class="tl2">→ hash slot</text>
+      <path d="M210 130 H257" class="e" marker-end="url(#am)"/>
+
+      <rect x="530" y="20" width="200" height="56" rx="8" class="nt"/><text x="630" y="44" text-anchor="middle" class="tl1">Shard 1</text><text x="630" y="62" text-anchor="middle" class="tl2">slots 0 - 5460</text>
+      <rect x="530" y="102" width="200" height="56" rx="8" class="nt"/><text x="630" y="126" text-anchor="middle" class="tl1">Shard 2</text><text x="630" y="144" text-anchor="middle" class="tl2">slots 5461 - 10922</text>
+      <rect x="530" y="184" width="200" height="56" rx="8" class="nt"/><text x="630" y="208" text-anchor="middle" class="tl1">Shard 3</text><text x="630" y="226" text-anchor="middle" class="tl2">slots 10923 - 16383</text>
+      <path d="M460 120 L527 50 M460 130 H527 M460 140 L527 210" class="e" marker-end="url(#am)"/>
+
+      <rect x="770" y="28" width="110" height="40" rx="8" class="n dash"/><text x="825" y="53" text-anchor="middle" class="tl2">replica</text>
+      <rect x="770" y="110" width="110" height="40" rx="8" class="n dash"/><text x="825" y="135" text-anchor="middle" class="tl2">replica</text>
+      <rect x="770" y="192" width="110" height="40" rx="8" class="n dash"/><text x="825" y="217" text-anchor="middle" class="tl2">replica</text>
+      <path d="M730 48 H767 M730 130 H767 M730 212 H767" class="e dash" marker-end="url(#am)"/>
+    </svg>
+    </div>
+    <figcaption>Three shards drawn for clarity; the real setup is about 10. Every key always maps to the same slot, so a client's bucket always lives on one shard. Each shard has a replica that takes over automatically if the main node dies.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This is <b>consistent hashing</b> again, the same idea from the WhatsApp design. Redis Cluster does it for us with 16,384 hash slots, so the gateway doesn't need any routing logic of its own.</p></div>
+</section>
+
+<!-- FAIL -->
+<section id="fail">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>What happens when Redis is down?</h2>
+    <p class="lede">A hard question with no single right answer. The limiter can't check anything, so it has to pick a default.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag good">FAIL-OPEN</span><h3>Let everything through</h3><p>The API stays up. But if Redis went down during a traffic spike, the backend now gets the whole spike with no protection, and may fall over too.</p></div>
+    <div class="card"><span class="tag great">FAIL-CLOSED</span><h3>Reject everything</h3><p>The backend is protected, but the API is effectively offline until Redis recovers. Chosen for this social platform, because limiter outages often happen during viral spikes.</p></div>
+    <div class="card"><h3>Make it rare</h3><p>Replicas with automatic failover, plus monitoring of Redis health, check latency and rejection rates, keep either choice from mattering often.</p></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The right answer depends on what's behind the limiter. For a payments API, letting unchecked traffic through could be far worse than a short outage. For an internal dashboard, failing open might be fine. The skill is asking "which failure hurts less here?"</p></div>
+</section>
+
+<!-- MORE -->
+<section id="more">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>Latency, hot keys and changing rules</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Keeping it under 10 ms</h3><ul>
+      <li><b>Connection pooling:</b> the biggest win; a new TCP connection can cost 20-50 ms</li>
+      <li><b>Regional deployment:</b> gateways and Redis close to users</li>
+      <li><b>One Lua call</b> instead of several round trips</li></ul></div>
+    <div class="card"><h3>Hot keys</h3><ul>
+      <li><b>Big legit clients:</b> client-side limiting, batching, premium tiers</li>
+      <li><b>Abusers:</b> auto-block after repeated 429s; DDoS protection (Cloudflare, AWS Shield)</li>
+      <li><b>Shared IPs (NAT):</b> higher IP limits, rely on user limits</li></ul></div>
+    <div class="card"><h3>Changing rules without a deploy</h3><ul>
+      <li><span class="tag good">GOOD</span> Gateways poll a config DB every ~30 s</li>
+      <li><span class="tag great">GREAT</span> ZooKeeper (or Redis pub/sub) pushes changes instantly</li>
+      <li>Push is faster, but must handle dropped connections</li></ul></div>
+  </div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>Limiter in the API gateway</b></td><td>In each server, separate service</td><td>Stops bad traffic early, no extra hop</td></tr>
+      <tr><td><b>Shared state in Redis</b></td><td>Local memory</td><td>Every gateway sees the same count; sub-ms reads</td></tr>
+      <tr><td><b>Token bucket</b></td><td>Fixed window, sliding log/counter, leaky bucket</td><td>Allows bursts, small state, easy to reason about</td></tr>
+      <tr><td><b>Lua script for the check</b></td><td>Read, then MULTI/EXEC</td><td>Atomic, so no two requests share a token; one round trip</td></tr>
+      <tr><td><b>Reject fast with 429</b></td><td>Queue extra requests</td><td>Predictable latency, clear signal to clients</td></tr>
+      <tr><td><b>Redis Cluster, ~10 shards + replicas</b></td><td>One big Redis</td><td>One instance can't do 1M checks/s</td></tr>
+      <tr><td><b>Fail-closed</b></td><td>Fail-open</td><td>Protects the backend during the spikes when Redis is most likely to struggle</td></tr>
+      <tr><td><b>Pushed rules (ZooKeeper)</b></td><td>Polling config</td><td>Rule changes apply in seconds</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>More servers, weaker limits</h3><p>With counters in each server, adding servers silently multiplies everyone's limit. Scaling up made the limiter worse.</p></div>
+    <div class="card"><h3>A race in 4 lines of code</h3><p>Read, calculate, write looks harmless. Only drawing two gateways side by side showed me how both can win the same token.</p></div>
+    <div class="card"><h3>Redis, again</h3><p>Pub/sub in WhatsApp, sorted sets in LeetCode, now hashes and Lua scripts. The same tool solved a different problem each time.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why can't each server just keep its own counter?</summary><p>Each server sees only part of a user's traffic. With 10 servers behind a load balancer, a limit of 100 per server lets the user make roughly 1,000 requests. The count has to be shared.</p></details>
+    <details><summary>With a fixed window of 100/min, how can a client send 200 requests in 2 seconds?</summary><p>Send 100 at 12:00:59 and 100 at 12:01:00. Each window sees only 100, so both say OK.</p></details>
+    <details><summary>A bucket has capacity 100 and refills 10 per minute. The user was idle for an hour. What happens if they send 150 requests at once?</summary><p>The bucket is full (capacity caps it at 100), so the first 100 pass and the next 50 get 429. After that they get about one request every 6 seconds.</p></details>
+    <details><summary>Why does a Lua script fix the race but MULTI/EXEC alone doesn't?</summary><p>MULTI/EXEC only groups the writes; the read happened before, outside it. A Lua script runs the read, the math and the write as one step on Redis, so no other command can run in between.</p></details>
+    <details><summary>Redis is down. Would you fail open or closed for a payments API?</summary><p>Usually fail closed: unchecked traffic to payments risks abuse and overload, and a short, clear outage is safer. The answer depends on what each failure would cost.</p></details>
+    <details><summary>Your whole university shares one public IP and keeps getting 429s. How do you fix it?</summary><p>Set a higher limit for IP-based rules and rely mainly on per-user limits for logged-in users, so one shared IP doesn't block everyone behind it.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>API gateway</li>
+      <li>Rate limiting algorithms</li>
+      <li>Redis hashes, EXPIRE and Lua scripts</li>
+      <li>Race conditions and atomicity</li>
+      <li>Sharding, consistent hashing, Redis Cluster</li>
+      <li>Replication and failover</li>
+      <li>Fail-open vs fail-closed</li>
+      <li>Push vs poll configuration</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">2 app containers with in-memory counters behind Nginx: watch the limit double</label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Same setup with a shared Redis token bucket: limit becomes correct</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Fire 50 concurrent requests at 1 token, with and without the Lua script</label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Stop the Redis container and compare fail-open vs fail-closed</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Try Nginx <code>limit_req</code> (a leaky bucket) and compare the behavior</label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Read how Laravel's <code>throttle</code> middleware counts, and which algorithm it is closest to</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Clients → gateway → Redis / backend, with 429 back</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The fixed window boundary problem</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">A token bucket with refill and capacity</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">The two-gateway race, and the Lua fix</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">Keys → hash slots → shards → replicas</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Fail-open vs fail-closed and when to pick each</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter" target="_blank" rel="noopener">Hello Interview's distributed rate limiter breakdown</a>, plus the Redis docs on Lua scripting and Redis Cluster. The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('rl-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('rl-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How a 30-minute delivery app knows what's in stock near you: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Stock across nearby warehouses, no overselling with one transaction, and fast reads at 20K per second.">
+<title>How a 30-minute delivery app knows what's in stock near you | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How a 30-minute delivery app knows what's in stock near you</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>20 min</b> read</span></div>
+  <p class="lede">I've built checkout flows twice, a cart in an Angular dealership app and a Stripe checkout in Laravel, and both times "is it in stock?" was a single column I barely thought about. Quick commerce apps like Gopuff can't be that relaxed: stock is spread across thousands of small warehouses, and only the ones a driver can reach within an hour count. Two people tapping "Order" on the last bag of chips at the same moment must not both win. These notes rebuild that system step by step.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why "available" means the sum of stock across nearby warehouses</li>
+    <li>How to find warehouses within a 1-hour drive without calling a maps API 10,000 times</li>
+    <li>How one database transaction stops two people buying the same item</li>
+    <li>Why a distributed lock across two databases is weaker than it looks</li>
+    <li>How a cache, read replicas and region partitions serve 20K reads a second</li>
+    <li>The back-of-envelope math from orders per day to queries per second</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>10K</b><span>distribution centers</span></div>
+    <div class="stat"><b>100K</b><span>items in the catalog</span></div>
+    <div class="stat"><b>10M</b><span>orders per day</span></div>
+    <div class="stat"><b>&lt; 100 ms</b><span>for an availability check</span></div>
+    <div class="stat"><b>~20K</b><span>availability queries / second</span></div>
+    <div class="stat"><b>1 hour</b><span>max drive from warehouse to door</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities &amp; API</a>
+    <a href="#hld">Architecture</a><a href="#avail">Availability flow</a><a href="#order">No double-selling</a>
+    <a href="#nearby">Nearby warehouses</a><a href="#reads">20K reads/s</a><a href="#partition">Partitions</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts &amp; labs</a><a href="#memory">Draw it from memory</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>One warehouse, one inventory table</span></div>
+    <div><b>v2</b><span>Many warehouses: add up stock from the nearby ones</span></div>
+    <div><b>v3</b><span>Orders and stock change in one transaction</span></div>
+    <div><b>v4</b><span>"Nearby" means drive time, not a straight line</span></div>
+    <div><b>v5</b><span>20K reads/s: cache, replicas, region partitions</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>WhatsApp was about moving messages and LeetCode about running strangers' code. This one is about <b>a number that must be right</b>: how many of an item are left. Reads can be a little stale (nobody minds seeing "3 left" when there are really 2), but the write that takes the last unit must be exact. Most of the design follows from treating those two paths differently.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>Given my location, show which items can reach me within 1 hour</li>
+      <li>Availability is the total across all nearby warehouses</li>
+      <li>Order several items in one order</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Availability answers in under 100 ms (it feels like search)</li>
+      <li>Orders are strongly consistent: no item sold twice</li>
+      <li>10,000 warehouses, 100,000 catalog items</li>
+      <li>About 10 million orders a day</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Payments</li>
+      <li>Drivers, routing and the delivery itself</li>
+      <li>Search and catalog APIs</li>
+      <li>Cancellations and returns</li>
+      <li>Security and disaster recovery</li></ul></div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">The key split: an <b>Item</b> is a product type ("Cheetos, 8 oz"), while <b>Inventory</b> is the physical stock of that item sitting in one <b>Distribution Center</b> (DC, a small warehouse). An <b>Order</b> ties a customer to the inventory they bought.</p></div>
+  <div class="schema">
+    <div class="tbl"><h4>items</h4><div><span class="k">id</span><small>pk</small></div><div><span>name</span><small>text</small></div><div><span>description</span><small>text</small></div></div>
+    <div class="tbl"><h4>distribution_centers</h4><div><span class="k">id</span><small>pk</small></div><div><span>lat, long</span><small>float</small></div><div><span>region_id</span><small>zip prefix</small></div></div>
+    <div class="tbl"><h4>inventory</h4><div><span class="k">item_id, dc_id</span><small>pk</small></div><div><span>quantity</span><small>int</small></div><div><span>region_id</span><small>partition key</small></div></div>
+    <div class="tbl"><h4>orders · order_items</h4><div><span class="k">order_id</span><small>pk</small></div><div><span>user_id, address</span><small>from session</small></div><div><span>item_id, dc_id, qty</span><small>per line</small></div></div>
+  </div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /availability?lat=&amp;long=&amp;keyword=&amp;page=</code></td><td>Location, optional filters, page</td><td>Items with total count across nearby DCs</td></tr>
+      <tr><td><code>POST /orders</code></td><td><code>lat</code>, <code>long</code>, <code>items: [{itemId, qty}]</code></td><td>The created order, or a failure if anything is out of stock</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Both calls carry the location, and the order call <b>checks nearby stock again</b> instead of trusting what the availability page showed. The page may be a minute old, and the client could send anything. The source only describes these two endpoints in words, so the paths and field names here are my own. I simplified inventory to a <code>quantity</code> per item per DC; tracking each physical unit as its own row is the same idea with more rows.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Two services, one shared helper, one database. Each later section zooms into one part.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 500" role="img" aria-label="Local delivery architecture">
+      <rect x="20" y="205" width="140" height="70" rx="8" class="n"/><text x="90" y="236" text-anchor="middle" class="tl1">Customer app</text><text x="90" y="255" text-anchor="middle" class="tl2">sends location</text>
+      <rect x="200" y="205" width="140" height="70" rx="8" class="n"/><text x="270" y="236" text-anchor="middle" class="tl1">API gateway</text><text x="270" y="255" text-anchor="middle" class="tl2">routes requests</text>
+
+      <rect x="400" y="60" width="190" height="70" rx="8" class="nt"/><text x="495" y="91" text-anchor="middle" class="tl1">Availability Service</text><text x="495" y="110" text-anchor="middle" class="tl2">read path</text>
+      <rect x="400" y="205" width="190" height="70" rx="8" class="na"/><text x="495" y="236" text-anchor="middle" class="tl1">Nearby Service</text><text x="495" y="255" text-anchor="middle" class="tl2">DCs kept in memory</text>
+      <rect x="400" y="350" width="190" height="70" rx="8" class="nt"/><text x="495" y="381" text-anchor="middle" class="tl1">Orders Service</text><text x="495" y="400" text-anchor="middle" class="tl2">write path</text>
+
+      <rect x="650" y="60" width="140" height="70" rx="8" class="na"/><text x="720" y="91" text-anchor="middle" class="tl1">Redis cache</text><text x="720" y="110" text-anchor="middle" class="tl2">TTL ~1 min</text>
+      <rect x="650" y="205" width="140" height="70" rx="8" class="n"/><text x="720" y="236" text-anchor="middle" class="tl1">Travel time</text><text x="720" y="255" text-anchor="middle" class="tl2">external API</text>
+
+      <rect x="620" y="320" width="340" height="165" rx="10" class="n dash"/>
+      <text x="640" y="344" class="tl2">POSTGRES · PARTITIONED BY REGION</text>
+      <rect x="640" y="360" width="140" height="60" rx="8" class="nb"/><text x="710" y="386" text-anchor="middle" class="tl1">Leader</text><text x="710" y="404" text-anchor="middle" class="tl2">all writes</text>
+      <rect x="800" y="360" width="140" height="60" rx="8" class="nb"/><text x="870" y="386" text-anchor="middle" class="tl1">Read replicas</text><text x="870" y="404" text-anchor="middle" class="tl2">lag is fine</text>
+      <text x="640" y="470" class="tl2">inventory · items · orders · DCs</text>
+
+      <path d="M160 240 H197" class="e" marker-end="url(#am)"/>
+      <path d="M310 205 V95 H397" class="e" marker-end="url(#am)"/>
+      <text x="302" y="150" text-anchor="end" class="tlb">GET /availability</text>
+      <path d="M310 275 V385 H397" class="e" marker-end="url(#am)"/>
+      <text x="302" y="335" text-anchor="end" class="tlb">POST /orders</text>
+
+      <path d="M495 130 V202" class="ea" marker-end="url(#aa)"/>
+      <path d="M495 350 V278" class="ea" marker-end="url(#aa)"/>
+      <path d="M590 240 H647" class="ea" marker-end="url(#aa)"/>
+      <path d="M590 95 H647" class="ea" marker-end="url(#aa)"/>
+      <path d="M560 130 V165 H870 V357" class="eb" marker-end="url(#ab)"/>
+      <text x="720" y="157" text-anchor="middle" class="tb">cache miss</text>
+      <path d="M590 385 H637" class="eb" marker-end="url(#ab)"/>
+      <text x="614" y="377" text-anchor="middle" class="tb">tx</text>
+      <path d="M780 390 H797" class="eb dash" marker-end="url(#ab)"/>
+      <text x="790" y="442" text-anchor="middle" class="tb">async copy</text>
+    </svg>
+    </div>
+    <figcaption>Both services ask the Nearby Service "which DCs can reach this location in an hour?". Reads go cache first, then a replica. Orders go straight to the leader inside one transaction, and afterwards clear the cache keys they changed.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Inventory and orders live in <b>the same Postgres database</b> on purpose. That is what lets one transaction change both. The price is that they scale together, but at 10 million orders a day (about 100 per second) a partitioned Postgres handles the writes fine. The heavy load is reads, and those are pushed away from the leader.</p></div>
+</section>
+
+<!-- AVAILABILITY FLOW -->
+<section id="avail">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>What happens when you open the app</h2>
+    <p class="lede">Follow the numbers. The trick is that "what's available" is never stored anywhere ready-made: it's computed from your location each time (and then cached).</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 480" role="img" aria-label="Availability query sequence">
+      <rect x="10" y="16" width="120" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Customer app</text>
+      <rect x="160" y="16" width="140" height="44" rx="8" class="nt"/><text x="230" y="43" text-anchor="middle" class="tl1">Availability</text>
+      <rect x="330" y="16" width="120" height="44" rx="8" class="na"/><text x="390" y="43" text-anchor="middle" class="tl1">Nearby</text>
+      <rect x="490" y="16" width="120" height="44" rx="8" class="n"/><text x="550" y="43" text-anchor="middle" class="tl1">Travel time</text>
+      <rect x="655" y="16" width="110" height="44" rx="8" class="na"/><text x="710" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <rect x="800" y="16" width="130" height="44" rx="8" class="nb"/><text x="865" y="43" text-anchor="middle" class="tl1">Read replica</text>
+      <path d="M70 60 V465 M230 60 V465 M390 60 V465 M550 60 V465 M710 60 V465 M865 60 V465" class="life"/>
+
+      <path d="M70 100 H226" class="e" marker-end="url(#am)"/><text x="150" y="93" text-anchor="middle" class="tlb">1 GET /availability</text>
+      <path d="M230 140 H386" class="ea" marker-end="url(#aa)"/><text x="310" y="133" text-anchor="middle" class="ta">2 nearby DCs?</text>
+      <rect x="330" y="156" width="120" height="30" rx="6" class="na"/><text x="390" y="176" text-anchor="middle" class="tlb">3 radius prune</text>
+      <path d="M390 215 H546" class="ea" marker-end="url(#aa)"/><text x="470" y="208" text-anchor="middle" class="ta">4 drive times?</text>
+      <path d="M550 255 H394" class="ea dash" marker-end="url(#aa)"/><text x="470" y="248" text-anchor="middle" class="ta">5 minutes per DC</text>
+      <path d="M390 295 H234" class="ea dash" marker-end="url(#aa)"/><text x="310" y="288" text-anchor="middle" class="ta">6 DCs ≤ 1 hour</text>
+      <path d="M230 335 H706" class="ea" marker-end="url(#aa)"/><text x="470" y="328" text-anchor="middle" class="ta">7 GET cached result</text>
+      <path d="M230 375 H861" class="eb" marker-end="url(#ab)"/><text x="550" y="368" text-anchor="middle" class="tb">8 on miss: SUM by item</text>
+      <path d="M230 415 H706" class="ea" marker-end="url(#aa)"/><text x="470" y="408" text-anchor="middle" class="ta">9 SET, TTL ~1 min</text>
+      <path d="M230 455 H74" class="e dash" marker-end="url(#am)"/><text x="150" y="448" text-anchor="middle" class="tlb">10 items + counts</text>
+    </svg>
+    </div>
+    <figcaption>Step 8 is one query: take the inventory rows for the nearby DC ids, join the items table for names, and add up the quantity per item. A cache hit at step 7 skips steps 8 and 9.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The customer doesn't care which warehouse their chips come from. If DC A has 2 and DC B has 3, and both can reach you in time, the app shows 5. That <b>union across nearby DCs</b> is the core idea. In a real product the catalog (names, photos, keyword search) would move to its own search index such as Elasticsearch, and this service would only add up counts.</p></div>
+</section>
+
+<!-- ORDER -->
+<section id="order">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Never selling the same bag of chips twice</h2>
+    <p class="lede">Strong consistency here means: if one unit is left, exactly one of the two people racing for it gets it. Here's how the naive version breaks.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Two customers overselling the last item">
+      <rect x="40" y="16" width="160" height="44" rx="8" class="n"/><text x="120" y="43" text-anchor="middle" class="tl1">Customer A</text>
+      <rect x="370" y="16" width="160" height="44" rx="8" class="nb"/><text x="450" y="43" text-anchor="middle" class="tl1">Inventory row</text>
+      <rect x="700" y="16" width="160" height="44" rx="8" class="n"/><text x="780" y="43" text-anchor="middle" class="tl1">Customer B</text>
+      <path d="M120 60 V235 M450 60 V235 M780 60 V235" class="life"/>
+      <path d="M120 100 H446" class="e" marker-end="url(#am)"/><text x="285" y="93" text-anchor="middle" class="tlb">1 read: quantity = 1</text>
+      <path d="M780 140 H454" class="e" marker-end="url(#am)"/><text x="615" y="133" text-anchor="middle" class="tlb">2 read: quantity = 1</text>
+      <path d="M120 180 H446" class="er" marker-end="url(#ar)"/><text x="285" y="173" text-anchor="middle" class="tr">3 write 0, create order</text>
+      <path d="M780 220 H454" class="er" marker-end="url(#ar)"/><text x="615" y="213" text-anchor="middle" class="tr">4 write 0, create order</text>
+      <rect x="290" y="248" width="320" height="40" rx="8" class="nr"/><text x="450" y="273" text-anchor="middle" class="tl1">Two orders, one bag of chips</text>
+    </svg>
+    </div>
+    <figcaption>Both reads happen before either write, so both customers see "1 left" and both succeed. One of them gets a refund and an apology instead of chips.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Read, then write</h3><p>Check the count in one query and update in another, with nothing in between. Fine in testing, broken under real traffic, as shown above. (This one is my own starting point, not from the source.)</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Two databases + distributed lock</h3><p>Orders and inventory live in separate stores. Lock the items, create the order, decrement stock, unlock. But a crash between "create order" and "decrement" leaves the two out of sync, needing cleanup sweeps. And A locks chips then wants soda while B holds soda and wants chips: deadlock.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>One Postgres transaction</h3><p>Keep orders and inventory in the same database. Check stock, mark it ordered, insert the order rows and commit, all as one unit. If any item is short, the whole thing rolls back. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 320" role="img" aria-label="Order placed inside one database transaction">
+      <rect x="20" y="120" width="170" height="70" rx="8" class="nt"/><text x="105" y="151" text-anchor="middle" class="tl1">Orders Service</text><text x="105" y="170" text-anchor="middle" class="tl2">POST /orders</text>
+      <path d="M190 150 H247" class="eb" marker-end="url(#ab)"/><text x="218" y="142" text-anchor="middle" class="tb">BEGIN</text>
+
+      <rect x="250" y="20" width="630" height="250" rx="10" class="nb"/>
+      <text x="270" y="46" class="tl1">One transaction on the leader (SERIALIZABLE)</text>
+      <rect x="270" y="62" width="590" height="40" rx="8" class="n"/><text x="286" y="87" class="tlb">1 check each item has stock in a nearby DC</text>
+      <rect x="270" y="112" width="590" height="40" rx="8" class="n"/><text x="286" y="137" class="tlb">2 mark those inventory units as ordered</text>
+      <rect x="270" y="162" width="590" height="40" rx="8" class="n"/><text x="286" y="187" class="tlb">3 INSERT INTO orders, order_items</text>
+      <rect x="270" y="212" width="590" height="40" rx="8" class="nt"/><text x="286" y="237" class="tlb">4 COMMIT  (any item short → ROLLBACK, nothing changes)</text>
+
+      <path d="M250 260 H105 V193" class="er dash" marker-end="url(#ar)"/>
+      <text x="30" y="295" class="tr">error 40001 → retry the whole transaction</text>
+    </svg>
+    </div>
+    <figcaption>All four steps happen, or none do. If two orders collide, Postgres lets one commit and aborts the other with a serialization error, which the service retries from step 1.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This is the same tool from my transactions and row-lock notes, just with higher stakes. In Laravel it would be <code>DB::transaction()</code> with <code>lockForUpdate()</code> on the inventory rows. One thing the PostgreSQL docs made clear to me: under <code>SERIALIZABLE</code>, a conflict surfaces as error code <code>40001</code>, Postgres <b>never retries it for you</b>, and the retry must rerun the whole transaction, including the stock check, not just the failed statement. The trade-off of all-or-nothing: one missing item fails the whole order. That's better than a half-filled order the customer didn't agree to; the app can show "soda just sold out" and let them resubmit.</p></div>
+</section>
+
+<!-- NEARBY -->
+<section id="nearby">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>Which warehouses can reach me in an hour?</h2>
+    <p class="lede">A warehouse 10 km away across a river with one bridge can be slower than one 25 km away on a highway. Straight-line distance lies, but asking a maps API about every warehouse is far too slow and costly.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Distance in SQL</h3><p>Store each DC's lat/long and filter with a straight-line (Haversine) distance. Fast, but blind to roads, rivers, borders and traffic.</p></div>
+    <div class="card"><span class="tag bad">BAD</span><h3>Travel-time API for every DC</h3><p>Accurate, but you'd ask about 10,000 warehouses per request when almost all of them are hours away. Too many external calls.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Prune first, then ask</h3><p>Keep DCs in memory (re-synced every ~5 minutes). Drop everything outside ~60 miles, the most optimistic distance an hour of driving could cover. Send only the survivors to the travel-time API. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 920 330" role="img" aria-label="Pruning distribution centers by radius, then drive time">
+      <rect x="20" y="20" width="400" height="295" rx="10" class="n"/>
+      <circle cx="220" cy="170" r="110" class="na"/>
+      <text x="40" y="44" class="tl2">~60-mile radius</text>
+      <path d="M200 40 Q290 170 420 170" class="eb"/>
+      <text x="368" y="188" class="tb">river</text>
+      <circle cx="220" cy="170" r="7" fill="var(--ink)"/>
+      <text x="220" y="196" text-anchor="middle" class="tlb">you</text>
+      <rect x="174" y="134" width="12" height="12" rx="2" class="nt"/>
+      <rect x="244" y="224" width="12" height="12" rx="2" class="nt"/>
+      <rect x="164" y="214" width="12" height="12" rx="2" class="nt"/>
+      <rect x="284" y="94" width="12" height="12" rx="2" class="nr"/>
+      <rect x="54" y="74" width="12" height="12" rx="2" class="n"/>
+      <rect x="374" y="54" width="12" height="12" rx="2" class="n"/>
+      <rect x="384" y="244" width="12" height="12" rx="2" class="n"/>
+      <rect x="49" y="264" width="12" height="12" rx="2" class="n"/>
+      <rect x="40" y="292" width="10" height="10" rx="2" class="nt"/><text x="56" y="301" class="tl2">≤ 1 h drive</text>
+      <rect x="150" y="292" width="10" height="10" rx="2" class="nr"/><text x="166" y="301" class="tl2">near but slow</text>
+      <rect x="275" y="292" width="10" height="10" rx="2" class="n"/><text x="291" y="301" class="tl2">pruned</text>
+
+      <rect x="470" y="30" width="420" height="64" rx="8" class="n"/><text x="680" y="57" text-anchor="middle" class="tl1">10,000 DCs in memory</text><text x="680" y="77" text-anchor="middle" class="tl2">re-synced from the DC table every ~5 min</text>
+      <path d="M680 94 V127" class="e" marker-end="url(#am)"/><text x="692" y="116" class="tl2">radius check</text>
+      <rect x="510" y="130" width="340" height="64" rx="8" class="na"/><text x="680" y="157" text-anchor="middle" class="tl1">A handful of candidates</text><text x="680" y="177" text-anchor="middle" class="tl2">straight-line filter, no API calls</text>
+      <path d="M680 194 V227" class="e" marker-end="url(#am)"/><text x="692" y="216" class="tl2">drive-time API</text>
+      <rect x="550" y="230" width="260" height="64" rx="8" class="nt"/><text x="680" y="257" text-anchor="middle" class="tl1">DCs within 1 hour</text><text x="680" y="277" text-anchor="middle" class="tl2">real roads, with traffic</text>
+    </svg>
+    </div>
+    <figcaption>The cheap filter can only ever include too much, never too little, because nothing beats a straight line at highway speed. The expensive check then removes the ones like the red DC across the river. Map is illustrative.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>10,000 coordinates fit easily in memory, so the radius check is a quick loop with no database call (my estimate: a few hundred KB). If the DC list grew much bigger or lived only in the database, PostGIS does the same pre-filter in SQL: <code>ST_DWithin(dc.geog, me, 96560)</code> uses meters for the geography type (60 miles ≈ 96,560 m) and its built-in bounding-box check can use a spatial index, so it never scans every row. It's the geospatial cousin of the "cheap check first" idea from my rate limiter notes.</p></div>
+</section>
+
+<!-- READS -->
+<section id="reads">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>Answering 20,000 availability checks a second</h2>
+    <p class="lede">People browse a lot more than they buy. A quick estimate turns "10 million orders a day" into the read load we actually face.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 190" role="img" aria-label="Back of envelope read load estimate">
+      <rect x="20" y="30" width="140" height="74" rx="8" class="n"/><text x="90" y="62" text-anchor="middle" class="tl1">10M</text><text x="90" y="82" text-anchor="middle" class="tl2">orders per day</text>
+      <text x="180" y="72" text-anchor="middle" class="tl1">÷</text>
+      <rect x="200" y="30" width="140" height="74" rx="8" class="n"/><text x="270" y="62" text-anchor="middle" class="tl1">~100K</text><text x="270" y="82" text-anchor="middle" class="tl2">seconds per day</text>
+      <text x="360" y="72" text-anchor="middle" class="tl1">×</text>
+      <rect x="380" y="30" width="140" height="74" rx="8" class="n"/><text x="450" y="62" text-anchor="middle" class="tl1">10</text><text x="450" y="82" text-anchor="middle" class="tl2">views per visit</text>
+      <text x="540" y="72" text-anchor="middle" class="tl1">÷</text>
+      <rect x="560" y="30" width="140" height="74" rx="8" class="n"/><text x="630" y="62" text-anchor="middle" class="tl1">0.05</text><text x="630" y="82" text-anchor="middle" class="tl2">of visits buy</text>
+      <text x="720" y="72" text-anchor="middle" class="tl1">=</text>
+      <rect x="740" y="30" width="140" height="74" rx="8" class="na"/><text x="810" y="62" text-anchor="middle" class="tl1">~20,000</text><text x="810" y="82" text-anchor="middle" class="tl2">queries / second</text>
+      <text x="450" y="148" text-anchor="middle" class="tl2">~100 orders/s, but about 200 availability checks for every order placed</text>
+    </svg>
+    </div>
+    <figcaption>A day has 86,400 seconds; rounding to 100,000 keeps the math easy. The page-view and conversion numbers are rough guesses, but the shape holds: this is a read-heavy system.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Every read hits the leader</h3><p>The same database that must commit orders exactly would also absorb 20K summing queries a second. Reads would slow down writes.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Redis cache in front</h3><p>Cache each result for about a minute. On a miss, query and store. The Orders Service deletes the affected keys after it changes stock.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Read replicas</h3><p>Availability reads go to replicas, which can lag slightly; orders always go to the leader. Add replicas as traffic grows. <b>Both chosen, together.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="Cache-aside reads with invalidation on orders">
+      <rect x="20" y="90" width="180" height="70" rx="8" class="nt"/><text x="110" y="121" text-anchor="middle" class="tl1">Availability</text><text x="110" y="140" text-anchor="middle" class="tl2">reads</text>
+      <rect x="360" y="20" width="180" height="70" rx="8" class="na"/><text x="450" y="51" text-anchor="middle" class="tl1">Redis</text><text x="450" y="70" text-anchor="middle" class="tl2">TTL ~1 min</text>
+      <rect x="360" y="170" width="180" height="70" rx="8" class="nb"/><text x="450" y="201" text-anchor="middle" class="tl1">Read replica</text><text x="450" y="220" text-anchor="middle" class="tl2">only on a miss</text>
+      <rect x="700" y="20" width="180" height="70" rx="8" class="nt"/><text x="790" y="51" text-anchor="middle" class="tl1">Orders Service</text><text x="790" y="70" text-anchor="middle" class="tl2">after commit</text>
+      <rect x="700" y="170" width="180" height="70" rx="8" class="nb"/><text x="790" y="201" text-anchor="middle" class="tl1">Leader</text><text x="790" y="220" text-anchor="middle" class="tl2">source of truth</text>
+
+      <path d="M200 110 L357 60" class="ea" marker-end="url(#aa)"/><text x="262" y="68" text-anchor="middle" class="ta">1 GET · 3 SET</text>
+      <path d="M200 140 L357 200" class="eb" marker-end="url(#ab)"/><text x="262" y="210" text-anchor="middle" class="tb">2 miss: SELECT</text>
+      <path d="M790 90 V167" class="eb" marker-end="url(#ab)"/><text x="800" y="133" class="tb">write tx</text>
+      <path d="M700 55 H543" class="er dash" marker-end="url(#ar)"/><text x="621" y="45" text-anchor="middle" class="tr">DEL keys</text>
+      <path d="M700 205 H543" class="eb dash" marker-end="url(#ab)"/><text x="621" y="197" text-anchor="middle" class="tb">replication</text>
+    </svg>
+    </div>
+    <figcaption>Cache-aside, the same pattern from my YouTube and LeetCode notes. The short TTL caps how stale a count can get even if an invalidation is missed.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>A slightly wrong <b>read</b> is cheap: at worst the app shows an item that's just sold out, and the order transaction refuses it with a clear message. A wrong <b>write</b> is expensive. So reads get speed (cache, replicas, staleness allowed) and writes get correctness (leader, transaction). The order path never trusts the cache or a replica.</p></div>
+</section>
+
+<!-- PARTITION -->
+<section id="partition">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>Splitting inventory by region</h2>
+    <p class="lede">A shopper in New York never needs stock from a warehouse in Los Angeles. So there's no reason for their query to look at it.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 270" role="img" aria-label="Inventory partitioned by zip prefix region">
+      <rect x="20" y="100" width="170" height="70" rx="8" class="n"/><text x="105" y="131" text-anchor="middle" class="tl1">User zip 10013</text><text x="105" y="150" text-anchor="middle" class="tl2">first 3 digits</text>
+      <path d="M190 135 H237" class="e" marker-end="url(#am)"/>
+      <rect x="240" y="100" width="150" height="70" rx="8" class="na"/><text x="315" y="131" text-anchor="middle" class="tl1">region 100</text><text x="315" y="150" text-anchor="middle" class="tl2">partition key</text>
+      <path d="M390 125 L467 54" class="ea" marker-end="url(#aa)"/>
+      <path d="M390 140 L467 106" class="ea" marker-end="url(#aa)"/>
+
+      <rect x="470" y="30" width="410" height="44" rx="8" class="nt"/><text x="490" y="57" class="tlb">inventory · region 100</text><text x="862" y="57" text-anchor="end" class="tt">scanned</text>
+      <rect x="470" y="84" width="410" height="44" rx="8" class="nt"/><text x="490" y="111" class="tlb">inventory · region 101 (border DC)</text><text x="862" y="111" text-anchor="end" class="tt">scanned</text>
+      <rect x="470" y="138" width="410" height="44" rx="8" class="n"/><text x="490" y="165" class="tlb">inventory · region 606</text><text x="862" y="165" text-anchor="end" class="tl2">skipped</text>
+      <rect x="470" y="192" width="410" height="44" rx="8" class="n"/><text x="490" y="219" class="tlb">inventory · region 900</text><text x="862" y="219" text-anchor="end" class="tl2">skipped</text>
+      <text x="675" y="258" text-anchor="middle" class="tl2">… one partition per region</text>
+    </svg>
+    </div>
+    <figcaption>Each DC gets a region id from the first 3 digits of its zip code, and inventory is partitioned on it. Most queries touch 1 partition, or 2 when a reachable DC sits just across a region line. Region numbers are made up.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Option</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>One big inventory table</td><td><span class="tag bad">BAD</span></td><td>Every query and index covers the whole country</td></tr>
+      <tr><td>Partition by region + replicas</td><td><span class="tag great">GREAT</span></td><td>Queries stay small; replicas spread the read load. <b>Chosen.</b></td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The partition key matches how people query: by where they are. The ongoing work is balancing: a dense city region gets far more traffic than a rural one, so replica counts and partition sizes need watching. In Bangladesh I'd reach for a district or postcode prefix instead of a US zip, but the idea is the same.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>Availability = sum over nearby DCs</b></td><td>Assign each user one DC</td><td>The customer only cares that it arrives in time, not from where</td></tr>
+      <tr><td><b>Radius prune, then travel-time API</b></td><td>SQL distance only, API for every DC</td><td>Accurate drive times with only a handful of external calls</td></tr>
+      <tr><td><b>Orders and inventory in one Postgres</b></td><td>Two stores + distributed lock</td><td>One transaction: no half-done orders, no cross-store deadlocks</td></tr>
+      <tr><td><b>SERIALIZABLE + retry on 40001</b></td><td>Read then write with no protection</td><td>Two buyers can't both take the last unit</td></tr>
+      <tr><td><b>All-or-nothing orders</b></td><td>Partially fill the order</td><td>Never ship something the customer didn't agree to</td></tr>
+      <tr><td><b>Redis cache, TTL ~1 min, invalidate on order</b></td><td>No cache</td><td>Absorbs most of the ~20K reads/s</td></tr>
+      <tr><td><b>Replicas for reads, leader for writes</b></td><td>Everything on the leader</td><td>Read spikes can't slow down order commits</td></tr>
+      <tr><td><b>Partition by region (zip prefix)</b></td><td>One national table</td><td>Queries touch 1 to 2 partitions instead of everything</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>The boring answer won</h3><p>I expected Redis locks or some clever queue for stock. The best answer was one plain Postgres transaction, the same thing I use in Laravel every week.</p></div>
+    <div class="card"><h3>Stale is fine, sometimes</h3><p>The availability page is allowed to be a minute old. Correctness only matters at the moment money and stock change hands.</p></div>
+    <div class="card"><h3>Straight lines lie</h3><p>In a city split by rivers and traffic jams, "nearest warehouse" by distance can be the wrong one. Drive time is the only honest measure.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>DC A has 2 bags of chips, DC B has 3, DC C has 10. A and B can reach you in 40 minutes, C needs 80. What does the app show?</summary><p>5. Only DCs within the 1-hour drive count, and their stock is added together. DC C is filtered out by the Nearby Service.</p></details>
+    <details><summary>Why not just call the travel-time API for every warehouse?</summary><p>With 10,000 DCs that's 10,000 external calls per request, almost all for warehouses hours away. A cheap ~60-mile radius check removes those first, so only a few candidates reach the API.</p></details>
+    <details><summary>Two people order the last unit at the same moment. Walk through what happens.</summary><p>Both start a transaction on the leader. Postgres detects the conflict: one commits, the other gets a serialization error (40001). The service retries that whole transaction, the stock check now sees 0, and the order fails with "out of stock".</p></details>
+    <details><summary>What goes wrong with a distributed lock over two separate databases?</summary><p>A crash after creating the order but before decrementing stock leaves them out of sync, needing cleanup jobs. And two orders locking items in different orders can deadlock each other.</p></details>
+    <details><summary>The cache says 3 left, but there's really 0. Is that a bug?</summary><p>Not a serious one. The read path is allowed to be slightly stale (TTL ~1 min, plus invalidation). The order transaction checks the real stock on the leader and refuses the order cleanly.</p></details>
+    <details><summary>Where does the ~20,000 queries/second number come from?</summary><p>10M orders ÷ ~100K seconds a day ≈ 100 orders/s. With about 10 page views per visit and 5% of visits ending in a purchase, that's 100 × 10 ÷ 0.05 ≈ 20,000 availability queries per second.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>ACID transactions and isolation levels</li>
+      <li>Serialization failures and retries</li>
+      <li>Distributed locks and deadlock</li>
+      <li>Geospatial pre-filtering (Haversine, PostGIS)</li>
+      <li>Cache-aside with TTL and invalidation</li>
+      <li>Read replicas and replication lag</li>
+      <li>Table partitioning</li>
+      <li>Back-of-envelope read/write ratio</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">Two <code>psql</code> sessions under <code>SERIALIZABLE</code> both buying the last unit; watch one fail with <code>40001</code></label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Laravel <code>DB::transaction</code> + <code>lockForUpdate()</code>, then fire 50 parallel orders at 10 units of stock</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">PostGIS: load 10,000 random DCs, add a GiST index, compare <code>ST_DWithin</code> with and without it in <code>EXPLAIN</code></label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Redis cache-aside with a 60 s TTL; delete the key after an order and check the count updates</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5"><code>PARTITION BY LIST (region_id)</code> and confirm in <code>EXPLAIN</code> that other partitions are skipped</label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Postgres leader + streaming replica in Compose; measure how far the replica lags under writes</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">App → gateway → Availability / Orders → Nearby → Postgres</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The 10-step availability flow with the cache</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">The overselling race between two customers</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">The 4-step order transaction and its retry</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">Radius prune → travel-time API funnel</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">The 20K QPS estimate and region partitions</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/gopuff" target="_blank" rel="noopener">Hello Interview's Gopuff breakdown</a>, the PostgreSQL docs on <a href="https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html" target="_blank" rel="noopener">serialization failure handling</a>, and the PostGIS reference for <a href="https://postgis.net/docs/manual-3.7/en/ST_DWithin.html" target="_blank" rel="noopener">ST_DWithin</a>. The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('gp-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('gp-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

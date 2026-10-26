@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How Dropbox keeps your files in sync: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Presigned uploads, resumable chunks, content fingerprints, push plus poll sync, and signed URLs.">
+<title>How Dropbox keeps your files in sync | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How Dropbox keeps your files in sync</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>25 min</b> read</span></div>
+  <p class="lede">I save a file on my laptop, and a few seconds later it is on my phone. I never press "upload" and I never think about it. Behind that small trick is a system that slices files into pieces, fingerprints every piece, and quietly argues with the server about which pieces it already has. These notes rebuild it step by step, from "upload a file" to "keep many devices in agreement".</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why file bytes should never pass through your API servers</li>
+    <li>How a 50 GB file is uploaded in small, resumable chunks</li>
+    <li>What a content fingerprint is and why it beats a file name</li>
+    <li>How a sync agent notices changes and hears about remote ones</li>
+    <li>Why one inserted byte can ruin naive chunking, and how to fix it</li>
+    <li>How short-lived signed URLs keep shared files private</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>50 GB</b><span>largest file to support</span></div>
+    <div class="stat"><b>10 MB</b><span>API Gateway request cap</span></div>
+    <div class="stat"><b>~1.1 h</b><span>to send 50 GB at 100 Mbps</span></div>
+    <div class="stat"><b>5-10 MB</b><span>chunk size for uploads</span></div>
+    <div class="stat"><b>4 MB</b><span>Dropbox's real block size</span></div>
+    <div class="stat"><b>~5 min</b><span>life of a signed URL</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities &amp; API</a>
+    <a href="#hld">Architecture</a><a href="#upload">Large uploads</a><a href="#fingerprints">Fingerprints</a>
+    <a href="#sync">Sync</a><a href="#speed">Speed</a><a href="#security">Security &amp; sharing</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts &amp; labs</a><a href="#memory">Draw it from memory</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>Upload and download through one app server</span></div>
+    <div><b>v2</b><span>Bytes go straight to S3 with presigned URLs, downloads via a CDN</span></div>
+    <div><b>v3</b><span>Chunked, resumable uploads with content fingerprints</span></div>
+    <div><b>v4</b><span>A sync agent: file watcher, push events, polling safety net</span></div>
+    <div><b>v5</b><span>Faster and safer: delta sync, compression, signed URLs</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>The YouTube note already covered presigned URLs and chunked, resumable multipart uploads, so v2 and v3 will feel familiar. What is new here is <b>sync</b>: the same file lives on several devices, any of them can change it, and they all have to end up agreeing. Fingerprints, delta sync and conflict handling all exist to serve that one goal.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>Upload a file from any device</li>
+      <li>Download a file from any device</li>
+      <li>Share a file and see files shared with me</li>
+      <li>Sync changes across my devices automatically</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Availability over consistency</li>
+      <li>Files up to 50 GB</li>
+      <li>Secure, durable, recoverable data</li>
+      <li>Low latency for upload, download and sync</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Editing or previewing files in the browser</li>
+      <li>Per-user storage quotas</li>
+      <li>File version history</li>
+      <li>Virus and malware scanning</li></ul></div>
+  </div>
+  <div class="note"><span class="who">Why availability wins</span>
+    <p>If I upload a file in Germany and my friend in the US sees it a few seconds later, nobody is hurt. Compare that with a bank transfer, where a stale read is a real problem. So the system stays up and accepts writes even if replicas are briefly out of date (eventual consistency).</p></div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">Entities: <b>File</b> (the raw bytes, in blob storage), <b>FileMetadata</b> (name, size, MIME type, owner, status, fingerprint, chunk list) and <b>User</b>. Keeping bytes and metadata apart is the most important split in the whole design.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /files/presigned-url</code></td><td>FileMetadata (name, size, fingerprint)</td><td>Upload ID + one presigned URL per chunk</td></tr>
+      <tr><td><code>PUT &lt;presigned URL&gt;</code></td><td>Raw chunk bytes, straight to S3</td><td>An <code>ETag</code> for that part</td></tr>
+      <tr><td><code>PATCH /files/:fileId/chunks</code></td><td>Chunk id, status, <code>ETag</code></td><td>Updated chunk status (after the server checks)</td></tr>
+      <tr><td><code>GET /files/:fileId/presigned-url</code></td><td>Nothing</td><td>A short-lived download URL</td></tr>
+      <tr><td><code>POST /files/:fileId/share</code></td><td>List of users</td><td>OK</td></tr>
+      <tr><td><code>GET /files/changes?since=&lt;time&gt;</code></td><td>Last sync time</td><td>Change events: file id, created / updated / deleted, new metadata</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>There is no <code>POST /files</code> that carries the file itself. The API only hands out <b>permission slips</b> (presigned URLs) and records metadata, and the bytes go to storage directly. Also, no endpoint takes a <code>userId</code> in the body: who I am comes from my session token, same rule as in the LeetCode note.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Two kinds of traffic: small metadata calls through the API, and big byte streams that skip it.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 470" role="img" aria-label="Dropbox architecture">
+      <rect x="20" y="120" width="170" height="110" rx="8" class="n"/>
+      <text x="105" y="150" text-anchor="middle" class="tl1">Clients</text>
+      <text x="105" y="172" text-anchor="middle" class="tl2">desktop sync agent</text>
+      <text x="105" y="192" text-anchor="middle" class="tl2">web · mobile</text>
+
+      <rect x="250" y="105" width="160" height="80" rx="8" class="nt"/><text x="330" y="138" text-anchor="middle" class="tl1">API gateway</text><text x="330" y="157" text-anchor="middle" class="tl2">auth · rate limit</text>
+      <rect x="470" y="105" width="190" height="80" rx="8" class="nt"/><text x="565" y="138" text-anchor="middle" class="tl1">File Service</text><text x="565" y="157" text-anchor="middle" class="tl2">metadata · signed URLs</text>
+
+      <rect x="470" y="260" width="190" height="110" rx="8" class="nb"/>
+      <text x="565" y="285" text-anchor="middle" class="tl1">Metadata DB</text>
+      <text x="486" y="310" class="tlb">FileMetadata</text>
+      <text x="486" y="330" class="tlb">SharedFiles</text>
+      <text x="486" y="350" class="tlb">fingerprint · chunks</text>
+
+      <rect x="250" y="270" width="160" height="80" rx="8" class="na"/><text x="330" y="302" text-anchor="middle" class="tl1">Push service</text><text x="330" y="321" text-anchor="middle" class="tl2">WebSocket / SSE</text>
+
+      <rect x="760" y="60" width="190" height="80" rx="8" class="na"/><text x="855" y="92" text-anchor="middle" class="tl1">S3 (blob store)</text><text x="855" y="111" text-anchor="middle" class="tl2">multipart chunks</text>
+      <rect x="760" y="300" width="190" height="80" rx="8" class="n"/><text x="855" y="332" text-anchor="middle" class="tl1">CDN (CloudFront)</text><text x="855" y="351" text-anchor="middle" class="tl2">edge cache</text>
+
+      <path d="M190 145 H247" class="e" marker-end="url(#am)"/>
+      <text x="219" y="136" text-anchor="middle" class="tl2">API</text>
+      <path d="M410 145 H467" class="e" marker-end="url(#am)"/>
+      <path d="M565 185 V257" class="eb" marker-end="url(#ab)"/>
+      <text x="575" y="225" class="tb">read / write</text>
+      <path d="M520 185 L413 290" class="ea" marker-end="url(#aa)"/>
+      <text x="455" y="225" text-anchor="end" class="ta">changes</text>
+      <path d="M250 300 H165 V233" class="ea dash" marker-end="url(#aa)"/>
+      <text x="205" y="318" text-anchor="middle" class="ta">push</text>
+
+      <path d="M105 120 V25 H855 V57" class="ea" marker-end="url(#aa)"/>
+      <text x="480" y="45" text-anchor="middle" class="ta">upload chunks (presigned PUT)</text>
+      <path d="M760 90 L663 125" class="ea dash" marker-end="url(#aa)"/>
+      <text x="712" y="88" text-anchor="end" class="ta">upload event</text>
+      <path d="M855 140 V297" class="eb" marker-end="url(#ab)"/>
+      <text x="865" y="225" class="tb">origin</text>
+      <path d="M855 380 V430 H70 V233" class="et" marker-end="url(#at)"/>
+      <text x="480" y="452" text-anchor="middle" class="tt">download via CDN (signed URL)</text>
+    </svg>
+    </div>
+    <figcaption>The File Service is the control plane: it decides who may do what and records it, but it never touches file bytes. S3 and the CDN are the data plane. The push service tells devices that something changed.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Files on the app server's disk</h3><p>One disk fills up, and if the server dies every file dies with it.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Upload through the server to S3</h3><p>Durable and scalable storage, but every byte travels twice, and the file and its metadata can end up out of step.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Presigned URL, straight to S3</h3><p>The server signs a short-lived upload URL, the client sends bytes to S3, and an S3 event marks the file uploaded. <b>Chosen.</b></p></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Metadata lives in <b>DynamoDB</b> (PostgreSQL would also be fine; the queries are simple lookups). Downloads follow the same idea as uploads: a presigned download URL is good, but users far from the S3 region are slow, so popular files are served from a <b>CDN</b> close to them. Caching everything at the edge costs money, so only frequently read files go there, with cache headers and invalidation when a file changes or is deleted.</p></div>
+</section>
+
+<!-- UPLOAD -->
+<section id="upload">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Uploading a 50 GB file without tears</h2>
+    <p class="lede">One big request fails on every front: 50 GB at 100 Mbps is about 4,000 seconds, Amazon API Gateway rejects bodies over 10 MB, one network blip restarts everything, and the user sees no progress bar.</p></div>
+  <p>The fix, which I met in the YouTube note, is to split the file into 5-10 MB <b>chunks</b> on the client and upload them separately with S3 multipart upload. Chunking must happen on the client: if the server does it, the full file still has to travel to the server first. The new question here is: <b>who decides that a chunk is really uploaded?</b></p>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>One giant POST</h3><p>Timeouts, the 10 MB gateway cap, and a restart from zero on any drop.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Client reports chunk status</h3><p>Simple, but a buggy or malicious client can mark chunks "uploaded" that never arrived, leaving corrupt files that are hard to debug.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Trust, but verify</h3><p>The client sends each chunk's <code>ETag</code>, and the server confirms with S3's <code>ListParts</code> before updating status. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 530" role="img" aria-label="Chunked upload sequence">
+      <rect x="20" y="16" width="140" height="44" rx="8" class="n"/><text x="90" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="255" y="16" width="150" height="44" rx="8" class="nt"/><text x="330" y="43" text-anchor="middle" class="tl1">File Service</text>
+      <rect x="490" y="16" width="140" height="44" rx="8" class="nb"/><text x="560" y="43" text-anchor="middle" class="tl1">Metadata DB</text>
+      <rect x="750" y="16" width="140" height="44" rx="8" class="na"/><text x="820" y="43" text-anchor="middle" class="tl1">S3</text>
+      <path d="M90 60 V515 M330 60 V515 M560 60 V515 M820 60 V515" class="life"/>
+
+      <rect x="10" y="78" width="170" height="32" rx="6" class="nt"/><text x="95" y="99" text-anchor="middle" class="tlb">1 chunk + hash file</text>
+      <path d="M90 140 H326" class="e" marker-end="url(#am)"/><text x="210" y="133" text-anchor="middle" class="tlb">2 POST /files/presigned-url</text>
+      <path d="M330 180 H816" class="ea" marker-end="url(#aa)"/><text x="690" y="173" text-anchor="middle" class="ta">3 CreateMultipartUpload</text>
+      <path d="M330 220 H556" class="eb" marker-end="url(#ab)"/><text x="445" y="213" text-anchor="middle" class="tb">4 save: uploading</text>
+      <path d="M330 260 H94" class="e dash" marker-end="url(#am)"/><text x="210" y="253" text-anchor="middle" class="tlb">5 uploadId + part URLs</text>
+      <path d="M90 300 H816" class="ea" marker-end="url(#aa)"/><text x="690" y="293" text-anchor="middle" class="ta">6 PUT each part (in parallel)</text>
+      <path d="M820 340 H94" class="ea dash" marker-end="url(#aa)"/><text x="690" y="333" text-anchor="middle" class="ta">7 ETag per part</text>
+      <path d="M90 380 H326" class="e" marker-end="url(#am)"/><text x="210" y="373" text-anchor="middle" class="tlb">8 PATCH /chunks + ETag</text>
+      <path d="M330 420 H816" class="ea" marker-end="url(#aa)"/><text x="690" y="413" text-anchor="middle" class="ta">9 ListParts (verify)</text>
+      <path d="M330 460 H816" class="ea" marker-end="url(#aa)"/><text x="690" y="453" text-anchor="middle" class="ta">10 CompleteMultipartUpload</text>
+      <path d="M330 500 H556" class="eb" marker-end="url(#ab)"/><text x="445" y="493" text-anchor="middle" class="tb">11 status: uploaded</text>
+    </svg>
+    </div>
+    <figcaption>Steps 6 to 9 repeat per chunk. Only after S3 confirms it has stitched the parts together (step 10) does the file become "uploaded". If the laptop sleeps halfway, the chunk list in the metadata says exactly where to resume.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The <code>chunks</code> array in FileMetadata (each one <i>not-uploaded</i>, <i>uploading</i> or <i>uploaded</i>) is what makes the upload <b>resumable</b> and gives a real progress bar. Verifying with <code>ListParts</code> keeps that array honest, because S3 is the only party that truly knows what it received. Once assembled, the file is a single S3 object again, and HTTP Range requests let a download be resumed or split into parallel pieces too.</p></div>
+</section>
+
+<!-- FINGERPRINTS -->
+<section id="fingerprints">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>Fingerprints: naming a file by what's inside</h2>
+    <p class="lede">How does the client know "I already started uploading this file yesterday"? Not by its name: I have five files called <code>report.pdf</code>. It needs an identity based on the <b>content</b>.</p></div>
+  <p>A <b>fingerprint</b> is a hash of the bytes, for example SHA-256. Same bytes always give the same hash; change one byte and the hash changes completely. The client computes one per chunk and one for the whole file before uploading anything.</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 280" role="img" aria-label="Chunk and file fingerprints">
+      <text x="20" y="28" class="tl2">holiday.mp4 · 42 MB</text>
+      <rect x="20" y="40" width="170" height="56" rx="8" class="n"/><text x="105" y="64" text-anchor="middle" class="tl1">chunk 1</text><text x="105" y="83" text-anchor="middle" class="tl2">10 MB</text>
+      <rect x="200" y="40" width="170" height="56" rx="8" class="n"/><text x="285" y="64" text-anchor="middle" class="tl1">chunk 2</text><text x="285" y="83" text-anchor="middle" class="tl2">10 MB</text>
+      <rect x="380" y="40" width="170" height="56" rx="8" class="n"/><text x="465" y="64" text-anchor="middle" class="tl1">chunk 3</text><text x="465" y="83" text-anchor="middle" class="tl2">10 MB</text>
+      <rect x="560" y="40" width="170" height="56" rx="8" class="n"/><text x="645" y="64" text-anchor="middle" class="tl1">chunk 4</text><text x="645" y="83" text-anchor="middle" class="tl2">10 MB</text>
+      <rect x="740" y="40" width="120" height="56" rx="8" class="n"/><text x="800" y="64" text-anchor="middle" class="tl1">chunk 5</text><text x="800" y="83" text-anchor="middle" class="tl2">2 MB</text>
+
+      <rect x="45" y="120" width="120" height="34" rx="6" class="nb"/><text x="105" y="142" text-anchor="middle" class="tlb">h1 = 9f2c…</text>
+      <rect x="225" y="120" width="120" height="34" rx="6" class="nb"/><text x="285" y="142" text-anchor="middle" class="tlb">h2 = 41ab…</text>
+      <rect x="405" y="120" width="120" height="34" rx="6" class="nb"/><text x="465" y="142" text-anchor="middle" class="tlb">h3 = c07e…</text>
+      <rect x="585" y="120" width="120" height="34" rx="6" class="nb"/><text x="645" y="142" text-anchor="middle" class="tlb">h4 = 7d10…</text>
+      <rect x="745" y="120" width="110" height="34" rx="6" class="nb"/><text x="800" y="142" text-anchor="middle" class="tlb">h5 = e5b3…</text>
+      <path d="M105 96 V117 M285 96 V117 M465 96 V117 M645 96 V117 M800 96 V117" class="eb" marker-end="url(#ab)"/>
+
+      <rect x="230" y="196" width="400" height="64" rx="8" class="na"/>
+      <text x="430" y="222" text-anchor="middle" class="tl1">File fingerprint: SHA-256 of all bytes</text>
+      <text x="430" y="243" text-anchor="middle" class="tl2">stored next to a random UUID fileId</text>
+      <path d="M105 154 L300 193 M465 154 V193 M800 154 L560 193" class="ea" marker-end="url(#aa)"/>
+
+      <rect x="680" y="196" width="200" height="64" rx="8" class="n"/>
+      <text x="692" y="220" class="tl2">uploading → resume it</text>
+      <text x="692" y="242" class="tl2">unknown → start fresh</text>
+      <path d="M630 228 H677" class="e" marker-end="url(#am)"/>
+    </svg>
+    </div>
+    <figcaption>Chunk hashes let the server check each piece; the file hash answers "have I seen this exact file before?". Hash values here are made up.</figcaption>
+  </figure>
+  <p>Dropbox's own engineering blog shows the real version of this idea. Its client splits files into <b>4 MB blocks</b>, hashes each with SHA-256, and the ordered list of hashes (the <b>blocklist</b>) is the file. Uploading starts with a <i>commit</i>, not with bytes:</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 320" role="img" aria-label="Dropbox commit and need blocks protocol">
+      <rect x="20" y="16" width="140" height="44" rx="8" class="n"/><text x="90" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="305" y="16" width="150" height="44" rx="8" class="nt"/><text x="380" y="43" text-anchor="middle" class="tl1">Metaserver</text>
+      <rect x="595" y="16" width="150" height="44" rx="8" class="na"/><text x="670" y="43" text-anchor="middle" class="tl1">Blockserver</text>
+      <path d="M90 60 V305 M380 60 V305 M670 60 V305" class="life"/>
+
+      <path d="M90 100 H376" class="e" marker-end="url(#am)"/><text x="235" y="93" text-anchor="middle" class="tlb">1 commit(h1 … h5)</text>
+      <path d="M380 140 H94" class="e dash" marker-end="url(#am)"/><text x="235" y="133" text-anchor="middle" class="tlb">2 need blocks: h2, h5</text>
+      <path d="M90 180 H666" class="ea" marker-end="url(#aa)"/><text x="525" y="173" text-anchor="middle" class="ta">3 store(h2, h5)</text>
+      <path d="M90 220 H376" class="e" marker-end="url(#am)"/><text x="235" y="213" text-anchor="middle" class="tlb">4 commit again</text>
+      <path d="M380 260 H94" class="e dash" marker-end="url(#am)"/><text x="235" y="253" text-anchor="middle" class="tlb">5 ok: new journal row</text>
+    </svg>
+    </div>
+    <figcaption>The client says "this file is made of these hashes". The server answers with only the hashes it is missing. Blocks it already has are never sent again.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This gives <b>deduplication</b> for free: if a block already exists anywhere, it is not uploaded twice. The blockserver is just a key-value store from hash to encrypted block and knows nothing about users or files; all meaning lives in the metadata. One caution from the main source: keep the <code>fileId</code> a random UUID and store the fingerprint as a separate field. Two people can upload identical bytes, and they still own two different files.</p></div>
+</section>
+
+<!-- SYNC -->
+<section id="sync">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>Sync: getting every device to agree</h2>
+    <p class="lede">Sync runs in two directions. <b>Local to remote</b>: I changed something, tell the cloud. <b>Remote to local</b>: something changed elsewhere, bring it here. The server is the source of truth.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 280" role="img" aria-label="Two-way sync between devices">
+      <rect x="20" y="30" width="240" height="220" rx="10" class="n dash"/>
+      <text x="36" y="52" class="tl2">LAPTOP · SYNC AGENT</text>
+      <rect x="40" y="66" width="200" height="56" rx="8" class="nt"/><text x="140" y="90" text-anchor="middle" class="tl1">OS file watcher</text><text x="140" y="108" text-anchor="middle" class="tl2">FSEvents on macOS</text>
+      <rect x="40" y="140" width="200" height="56" rx="8" class="nt"/><text x="140" y="164" text-anchor="middle" class="tl1">Upload queue</text><text x="140" y="182" text-anchor="middle" class="tl2">changed files</text>
+      <path d="M140 122 V137" class="e" marker-end="url(#am)"/>
+
+      <rect x="330" y="60" width="200" height="80" rx="8" class="nt"/><text x="430" y="94" text-anchor="middle" class="tl1">File Service</text><text x="430" y="113" text-anchor="middle" class="tl2">+ S3 · source of truth</text>
+      <rect x="330" y="190" width="200" height="60" rx="8" class="na"/><text x="430" y="216" text-anchor="middle" class="tl1">Push service</text><text x="430" y="235" text-anchor="middle" class="tl2">WebSocket / SSE</text>
+      <path d="M240 168 L327 122" class="ea" marker-end="url(#aa)"/>
+      <text x="283" y="125" text-anchor="middle" class="ta">upload</text>
+      <path d="M430 140 V187" class="ea" marker-end="url(#aa)"/>
+      <text x="440" y="170" class="ta">change event</text>
+
+      <rect x="640" y="30" width="280" height="220" rx="10" class="n dash"/>
+      <text x="656" y="52" class="tl2">PHONE · SYNC AGENT</text>
+      <rect x="660" y="66" width="240" height="60" rx="8" class="nt"/><text x="780" y="91" text-anchor="middle" class="tl1">Download changes</text><text x="780" y="110" text-anchor="middle" class="tl2">fetch missing chunks</text>
+      <rect x="660" y="150" width="240" height="56" rx="8" class="n"/><text x="780" y="174" text-anchor="middle" class="tl1">Local folder</text><text x="780" y="192" text-anchor="middle" class="tl2">written to disk</text>
+      <path d="M780 126 V147" class="e" marker-end="url(#am)"/>
+
+      <path d="M530 220 H590 V112 H657" class="ea" marker-end="url(#aa)"/>
+      <text x="582" y="172" text-anchor="end" class="ta">push</text>
+      <path d="M660 78 H533" class="e dash" marker-end="url(#am)"/>
+      <text x="596" y="70" text-anchor="middle" class="tl2">poll every few min</text>
+    </svg>
+    </div>
+    <figcaption>The push channel brings changes in real time. The slow poll (<code>GET /files/changes?since=</code>) is a safety net that catches any event the push channel dropped.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Remote to local</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Polling only</td><td><span class="tag good">GOOD</span></td><td>Easy to build, but slow to notice changes and wastes requests when nothing changed</td></tr>
+      <tr><td>WebSocket / SSE only</td><td><span class="tag good">GOOD</span></td><td>Instant, but if a message is lost during a reconnect, the device never learns about it</td></tr>
+      <tr><td>Push + slow poll</td><td><span class="tag great">GREAT</span></td><td>Real time when things work, self-healing when they don't. <b>Chosen.</b></td></tr>
+    </tbody></table></div>
+  <h3>When two devices edit the same file</h3>
+  <p>Say I edit <code>notes.txt</code> on my laptop on a plane, and my phone edits it too while offline. Both reconnect. The main source keeps it simple: <b>last write wins</b>.</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="Last write wins conflict timeline">
+      <text x="20" y="74" class="tl1">Laptop</text>
+      <text x="20" y="134" class="tl1">Server</text>
+      <text x="20" y="194" class="tl1">Phone</text>
+      <path d="M110 70 H880 M110 130 H880 M110 190 H880" class="life"/>
+
+      <rect x="160" y="52" width="150" height="36" rx="6" class="nt"/><text x="235" y="75" text-anchor="middle" class="tlb">edit v2 (offline)</text>
+      <rect x="300" y="172" width="150" height="36" rx="6" class="nt"/><text x="375" y="195" text-anchor="middle" class="tlb">edit v3 (offline)</text>
+
+      <path d="M520 70 V127" class="ea" marker-end="url(#aa)"/>
+      <text x="528" y="104" class="ta">upload v2</text>
+      <path d="M640 190 V133" class="ea" marker-end="url(#aa)"/>
+      <text x="648" y="166" class="ta">upload v3</text>
+
+      <rect x="700" y="112" width="180" height="36" rx="6" class="na"/><text x="790" y="135" text-anchor="middle" class="tlb">keeps v3 (last write)</text>
+      <path d="M790 112 V73" class="er dash" marker-end="url(#ar)"/>
+      <text x="782" y="97" text-anchor="end" class="tr">laptop gets v3</text>
+      <text x="450" y="240" text-anchor="middle" class="tl2">v2 is silently lost unless the system saves it somewhere</text>
+    </svg>
+    </div>
+    <figcaption>Last write wins is easy to reason about, and the server's order decides. The cost is that the earlier edit disappears.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Last write wins is fine for this scope because versioning is left out. A real product would rather not lose data: write the new content as new chunks and move a "current version" pointer, so the old version is still there. The Dropbox desktop app goes further and keeps the losing edit as a separate "conflicted copy" next to the original (that part is from my own use, not the sources). Sync is hard to get right: Dropbox spent about four years rewriting its sync engine (called Nucleus, in Rust) to get stable file IDs and stronger consistency guarantees.</p></div>
+</section>
+
+<!-- SPEED -->
+<section id="speed">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>Making upload, download and sync fast</h2>
+    <p class="lede">The fastest byte is the one you never send. Three tricks: send only what changed, shrink what you send, and send chunks in parallel.</p></div>
+  <p><b>Delta sync</b> means re-uploading only the chunks that changed. It sounds easy with fixed 5 MB chunks, until you insert one byte near the start of a file:</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Fixed size versus content defined chunking">
+      <text x="20" y="28" class="tl1">Fixed-size chunks</text>
+      <rect x="20" y="40" width="200" height="34" rx="6" class="n"/><text x="120" y="62" text-anchor="middle" class="tlb">h1</text>
+      <rect x="230" y="40" width="200" height="34" rx="6" class="n"/><text x="330" y="62" text-anchor="middle" class="tlb">h2</text>
+      <rect x="440" y="40" width="200" height="34" rx="6" class="n"/><text x="540" y="62" text-anchor="middle" class="tlb">h3</text>
+      <rect x="650" y="40" width="200" height="34" rx="6" class="n"/><text x="750" y="62" text-anchor="middle" class="tlb">h4</text>
+      <rect x="20" y="84" width="200" height="34" rx="6" class="nr"/><text x="120" y="106" text-anchor="middle" class="tlb">h1′ changed</text>
+      <rect x="230" y="84" width="200" height="34" rx="6" class="nr"/><text x="330" y="106" text-anchor="middle" class="tlb">h2′ changed</text>
+      <rect x="440" y="84" width="200" height="34" rx="6" class="nr"/><text x="540" y="106" text-anchor="middle" class="tlb">h3′ changed</text>
+      <rect x="650" y="84" width="200" height="34" rx="6" class="nr"/><text x="750" y="106" text-anchor="middle" class="tlb">h4′ changed</text>
+      <text x="20" y="140" class="tr">one inserted byte shifts every boundary → all 4 chunks re-upload</text>
+
+      <text x="20" y="178" class="tl1">Content-defined chunks (rolling hash)</text>
+      <rect x="20" y="190" width="180" height="34" rx="6" class="n"/><text x="110" y="212" text-anchor="middle" class="tlb">h1</text>
+      <rect x="210" y="190" width="240" height="34" rx="6" class="n"/><text x="330" y="212" text-anchor="middle" class="tlb">h2</text>
+      <rect x="460" y="190" width="170" height="34" rx="6" class="n"/><text x="545" y="212" text-anchor="middle" class="tlb">h3</text>
+      <rect x="640" y="190" width="210" height="34" rx="6" class="n"/><text x="745" y="212" text-anchor="middle" class="tlb">h4</text>
+      <rect x="20" y="234" width="184" height="34" rx="6" class="nr"/><text x="112" y="256" text-anchor="middle" class="tlb">h1′ changed</text>
+      <rect x="214" y="234" width="240" height="34" rx="6" class="nt"/><text x="334" y="256" text-anchor="middle" class="tlb">h2 same</text>
+      <rect x="464" y="234" width="170" height="34" rx="6" class="nt"/><text x="549" y="256" text-anchor="middle" class="tlb">h3 same</text>
+      <rect x="644" y="234" width="210" height="34" rx="6" class="nt"/><text x="749" y="256" text-anchor="middle" class="tlb">h4 same</text>
+      <text x="20" y="290" class="tt">boundaries follow the content → only chunk 1 re-uploads</text>
+    </svg>
+    </div>
+    <figcaption>Content-defined chunking slides a rolling hash (such as a Rabin fingerprint) over the bytes and cuts a chunk wherever the hash hits a chosen pattern. Since cuts depend on nearby content, an edit only disturbs the chunks around it.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Trick</th><th>What it does</th><th>Watch out for</th></tr></thead>
+    <tbody>
+      <tr><td><b>Parallel chunk upload</b></td><td>Several parts in flight at once fill the available bandwidth</td><td>Adapt chunk size to the network</td></tr>
+      <tr><td><b>Delta sync (CDC)</b></td><td>Only changed chunks travel</td><td>Needs content-defined boundaries, not fixed ones</td></tr>
+      <tr><td><b>Client-side compression</b></td><td>Text shrinks a lot: a 5 GB text file might become about 1 GB</td><td>Skip images and video; a PNG may shrink only a few percent</td></tr>
+      <tr><td><b>CDN for downloads</b></td><td>Bytes come from an edge server near the user</td><td>Costs money; cache only hot files</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Compression happens <b>on the client</b>, so S3 stores the compressed bytes and the backend never sits in the data path. Gzip works everywhere, Brotli squeezes text harder, and <b>Zstandard</b> is fast with good ratios, which makes it a strong client-side pick. Order matters: compress first, then encrypt. Encrypted data looks random, and random data does not compress. Dropbox also found a neat sync speed-up: with <b>streaming sync</b>, a second device starts prefetching blocks while the first is still uploading, which in their tests gave up to 2x faster multi-device sync for large files.</p></div>
+</section>
+
+<!-- SECURITY -->
+<section id="security">
+  <div class="head"><span class="eyebrow">Deep dive 5</span><h2>Sharing and keeping files private</h2>
+    <p class="lede">Two questions: how do I quickly list "files shared with me", and how do I stop a download link from working for strangers?</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Share list inside each file</h3><p>Finding files shared with me means scanning every file's list. Fine for 100 files, hopeless for billions.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Plus a reverse cache</h3><p>A user → file IDs map makes lookups fast, but now two copies must be kept in sync, ideally in one transaction.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>SharedFiles table</h3><p>One row per (userId, fileId), with userId as partition key. One source of truth, one indexed query. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 345" role="img" aria-label="Signed download URL flow">
+      <rect x="20" y="16" width="140" height="44" rx="8" class="n"/><text x="90" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="325" y="16" width="150" height="44" rx="8" class="nt"/><text x="400" y="43" text-anchor="middle" class="tl1">File Service</text>
+      <rect x="690" y="16" width="140" height="44" rx="8" class="na"/><text x="760" y="43" text-anchor="middle" class="tl1">CDN</text>
+      <path d="M90 60 V330 M400 60 V330 M760 60 V330" class="life"/>
+
+      <path d="M90 100 H396" class="e" marker-end="url(#am)"/><text x="245" y="93" text-anchor="middle" class="tlb">1 GET /files/:id/presigned-url</text>
+      <rect x="320" y="122" width="160" height="32" rx="6" class="nb"/><text x="400" y="143" text-anchor="middle" class="tlb">2 check SharedFiles</text>
+      <path d="M400 190 H94" class="e dash" marker-end="url(#am)"/><text x="245" y="183" text-anchor="middle" class="tlb">3 signed URL (~5 min)</text>
+      <path d="M90 230 H756" class="et" marker-end="url(#at)"/><text x="580" y="223" text-anchor="middle" class="tt">4 GET file + signature</text>
+      <rect x="650" y="248" width="220" height="32" rx="6" class="na"/><text x="760" y="269" text-anchor="middle" class="tlb">5 check signature + expiry</text>
+      <path d="M760 310 H94" class="et dash" marker-end="url(#at)"/><text x="580" y="303" text-anchor="middle" class="tt">6 file bytes</text>
+    </svg>
+    </div>
+    <figcaption>The server signs the path and expiry with a private key; the CDN checks the signature with the matching public key. No database call is needed at the edge.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Security comes in layers: <b>HTTPS</b> in transit, <b>S3 server-side encryption</b> at rest (keys stored apart from the data), the <b>SharedFiles</b> table as the access list, and <b>short-lived signed URLs</b>. A signed URL is a bearer token: anyone holding it can use it until it expires. That is why it lives only about five minutes, and why stricter setups also bind it to an IP or require an auth cookie.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>Presigned URLs, bytes straight to S3</b></td><td>Upload through the app server</td><td>Bytes travel once; API servers stay small and cheap</td></tr>
+      <tr><td><b>CDN for popular downloads</b></td><td>Presigned S3 URL only</td><td>Faster for far-away users; cache only hot files to control cost</td></tr>
+      <tr><td><b>Client-side 5-10 MB chunks, S3 multipart</b></td><td>One big POST</td><td>Beats the 10 MB gateway cap, resumable, real progress bar</td></tr>
+      <tr><td><b>Server verifies chunks with ListParts</b></td><td>Trust the client's PATCH</td><td>Only S3 knows what it really received</td></tr>
+      <tr><td><b>Fingerprint field + UUID fileId</b></td><td>Use the hash as the ID, or match by name</td><td>Resume and dedup by content, while identical files can still have different owners</td></tr>
+      <tr><td><b>SharedFiles table</b></td><td>Share list in metadata, reverse cache</td><td>One source of truth and a fast indexed query</td></tr>
+      <tr><td><b>Push + slow poll for sync</b></td><td>Polling only, push only</td><td>Real time, and self-healing when a push is missed</td></tr>
+      <tr><td><b>Last write wins</b></td><td>Versioning, conflicted copies</td><td>Simplest for this scope, since versioning is out</td></tr>
+      <tr><td><b>Content-defined chunking</b></td><td>Fixed-size chunks</td><td>An edit only changes nearby chunks, so delta sync works</td></tr>
+      <tr><td><b>Zstandard on the client, before encryption</b></td><td>No compression, server-side</td><td>Smaller uploads for text; backend stays out of the data path</td></tr>
+      <tr><td><b>~5 minute signed URLs</b></td><td>Long-lived or public links</td><td>A leaked link stops working quickly</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Upload starts with a question</h3><p>Dropbox doesn't send bytes first. It sends a list of hashes and asks "which ones do you need?". Deduplication falls out of that for free.</p></div>
+    <div class="card"><h3>One byte can break everything</h3><p>I assumed fixed chunks were enough for delta sync. One inserted byte at the top of a file changes every chunk after it.</p></div>
+    <div class="card"><h3>Push still needs polling</h3><p>After WhatsApp I thought WebSockets solved freshness. Here a slow poll stays as a backup, because a missed sync event means a stale file forever.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why not upload files through the File Service?</summary><p>Every byte would travel twice (client to server, server to S3), the servers would need huge bandwidth, and Amazon API Gateway rejects bodies over 10 MB anyway. Presigned URLs let the client send bytes straight to S3 while the server only signs and records.</p></details>
+    <details><summary>My laptop dies at 60% of a 20 GB upload. What happens when it comes back?</summary><p>The client recomputes the file fingerprint, finds a matching file with status "uploading", reads its chunk list, and uploads only the chunks not marked "uploaded". Then the server completes the multipart upload.</p></details>
+    <details><summary>Why does the server call ListParts instead of trusting the client's PATCH?</summary><p>The client might be buggy or malicious and claim chunks it never sent. S3 is the only party that knows what it received, so the server checks there before marking a chunk uploaded.</p></details>
+    <details><summary>Why keep a slow poll if devices already have a WebSocket?</summary><p>Connections drop, and events sent during a reconnect can be lost. The poll for changes since the last sync time catches anything missed, so every device eventually converges.</p></details>
+    <details><summary>Why do fixed-size chunks break delta sync, and what fixes it?</summary><p>Inserting a byte shifts every later boundary, so every later chunk hashes differently and gets re-uploaded. Content-defined chunking cuts at points chosen by a rolling hash of the content, so boundaries move with the data and only nearby chunks change.</p></details>
+    <details><summary>Why compress before encrypting and not after?</summary><p>Good encryption output looks random, and random data has no patterns to compress. Compressing first shrinks the real content, then encryption protects it.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>Control plane vs data plane</li>
+      <li>Presigned and signed URLs</li>
+      <li>S3 multipart upload, ETags, ListParts</li>
+      <li>Content hashing (SHA-256) and dedup</li>
+      <li>OS file watchers (FSEvents, inotify)</li>
+      <li>WebSocket / SSE plus polling</li>
+      <li>Last write wins and eventual consistency</li>
+      <li>Rolling hash and content-defined chunking</li>
+      <li>Compression (gzip, Brotli, Zstandard)</li>
+      <li>CDN caching</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">Run MinIO in Docker and upload a file with a presigned PUT URL from a tiny API</label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Do a multipart upload by hand, kill it halfway, then resume using <code>ListParts</code></label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Split a file with <code>split -b 5M</code>, <code>sha256sum</code> each part, and spot duplicate chunks across two files</label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Watch a folder with <code>inotifywait</code> (or Python watchdog) and queue changed files for upload</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Insert one byte at the top of a file and compare fixed vs content-defined chunk hashes</label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Compress a text file and a JPEG with gzip and <code>zstd</code>, and compare the ratios</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Clients → API gateway → File Service → Metadata DB, with bytes going to S3 and coming back via the CDN</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The 11-step chunked upload with presigned URLs and ListParts</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">Chunk hashes, file fingerprint, and the commit / need blocks / store dance</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">Two-way sync: watcher and upload queue, push channel, slow poll</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">Last write wins timeline with two offline edits</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Fixed vs content-defined chunks after a one-byte insert</label></li>
+    <li><input type="checkbox" id="c7"><label for="c7">Signed URL flow: check SharedFiles, sign, CDN verifies</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox" target="_blank" rel="noopener">Hello Interview's Dropbox breakdown</a>, plus two posts from the Dropbox tech blog: <a href="https://dropbox.tech/infrastructure/streaming-file-synchronization" target="_blank" rel="noopener">Streaming File Synchronization</a> (4 MB blocks, blocklists, commit and need blocks) and <a href="https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine" target="_blank" rel="noopener">Rewriting the heart of our sync engine</a> (Nucleus). The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('db-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('db-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

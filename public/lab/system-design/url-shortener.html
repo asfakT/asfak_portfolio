@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How a URL shortener turns long links into short ones: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Short unique codes from a counter and base62, and fast redirects with Redis and a CDN.">
+<title>How a URL shortener turns long links into short ones | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How a URL shortener turns long links into short ones</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>18 min</b> read</span></div>
+  <p class="lede">I paste short links all the time, in blog posts, in my portfolio, in messages to friends, and I always assumed the service behind them was trivial: store a pair, look it up. It mostly is. The interesting part is doing that one lookup a few hundred thousand times a second, in under 100 ms, without ever handing two links the same code. These notes build it up one problem at a time.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why a redirect should be 302, not 301</li>
+    <li>How a counter plus base62 gives short, unique codes</li>
+    <li>Why hashing works but needs collision checks</li>
+    <li>How a cache and a CDN make redirects fast</li>
+    <li>How many servers share one counter without clashing</li>
+    <li>The storage and traffic math for 1 billion links</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>1B</b><span>short URLs stored</span></div>
+    <div class="stat"><b>100M</b><span>daily active users</span></div>
+    <div class="stat"><b>1,000 : 1</b><span>clicks per new link</span></div>
+    <div class="stat"><b>&lt; 100 ms</b><span>per redirect</span></div>
+    <div class="stat"><b>99.99%</b><span>availability target</span></div>
+    <div class="stat"><b>~600K/s</b><span>redirects at peak (estimate)</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities &amp; API</a>
+    <a href="#hld">Architecture</a><a href="#create">Create flow</a><a href="#redirect">Redirect flow</a>
+    <a href="#codes">Unique codes</a><a href="#fast">Fast redirects</a><a href="#scale">Scaling</a><a href="#counter">Shared counter</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts &amp; labs</a><a href="#memory">Draw it from memory</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>One server, one table: save a pair, look it up</span></div>
+    <div><b>v2</b><span>Unique codes from a counter + base62</span></div>
+    <div><b>v3</b><span>Fast redirects with an index and a Redis cache</span></div>
+    <div><b>v4</b><span>Split read and write services, scale each</span></div>
+    <div><b>v5</b><span>Share one counter across many servers and regions</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>YouTube was about huge files and LeetCode about running strangers' code. A URL shortener is the opposite: tiny rows, simple logic. The whole design comes down to two questions: <b>how do I make a code that is short and never repeats</b>, and <b>how do I answer a flood of reads fast</b>. Everything else follows from the fact that people click links about a thousand times more often than they create them.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>Give a long URL, get a short URL back</li>
+      <li>Optionally pick a custom alias</li>
+      <li>Optionally set an expiration date</li>
+      <li>Open the short URL and land on the original</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Every short code is unique</li>
+      <li>Redirects in under 100 ms</li>
+      <li>99.99% available, availability over consistency</li>
+      <li>1 billion URLs and 100 million daily users</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>Login and account management</li>
+      <li>Click analytics (counts, countries)</li>
+      <li>Spam and malicious URL filtering</li>
+      <li>Real-time analytics consistency</li></ul></div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">Entities: <b>Original URL</b> (the long link), <b>Short URL</b> (the code people share), and <b>User</b> (who created it). In the database this is basically one table keyed by <code>short_code</code>.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /urls</code></td><td><code>long_url</code>, optional <code>custom_alias</code>, optional <code>expiration_date</code></td><td>The <code>short_url</code>, for example <code>short.ly/15ftgG</code></td></tr>
+      <tr><td><code>GET /{short_code}</code></td><td>Nothing</td><td><code>302</code> redirect to the long URL, <code>410 Gone</code> if expired, <code>404</code> if unknown</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The redirect is a plain <code>GET</code> on the root path, because the short link has to work when someone simply pastes it into a browser. No JSON, no headers, no client code. The server answers with a status code and a <code>Location</code> header, and the browser does the rest. The 410 vs 404 split (unknown vs expired) is a detail I picked up from the AlgoMaster write-up: it tells the user the link existed once, which is more honest than "never heard of it".</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Reads go up, writes go down, and each later section zooms into one part.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 440" role="img" aria-label="URL shortener architecture">
+      <rect x="20" y="200" width="130" height="76" rx="8" class="n"/><text x="85" y="232" text-anchor="middle" class="tl1">Browser / app</text><text x="85" y="251" text-anchor="middle" class="tl2">web or mobile</text>
+      <rect x="190" y="200" width="150" height="76" rx="8" class="na"/><text x="265" y="232" text-anchor="middle" class="tl1">CDN + edge</text><text x="265" y="251" text-anchor="middle" class="tl2">hot codes cached</text>
+      <rect x="380" y="200" width="140" height="76" rx="8" class="n"/><text x="450" y="232" text-anchor="middle" class="tl1">Load balancer</text><text x="450" y="251" text-anchor="middle" class="tl2">spreads requests</text>
+
+      <rect x="570" y="90" width="170" height="70" rx="8" class="nt"/><text x="655" y="120" text-anchor="middle" class="tl1">Read service</text><text x="655" y="139" text-anchor="middle" class="tl2">GET /{code}</text>
+      <rect x="570" y="320" width="170" height="70" rx="8" class="nt"/><text x="655" y="350" text-anchor="middle" class="tl1">Write service</text><text x="655" y="369" text-anchor="middle" class="tl2">POST /urls</text>
+
+      <rect x="820" y="30" width="150" height="64" rx="8" class="na"/><text x="895" y="57" text-anchor="middle" class="tl1">Redis cache</text><text x="895" y="76" text-anchor="middle" class="tl2">code → long URL</text>
+      <rect x="820" y="195" width="150" height="86" rx="8" class="nb"/><text x="895" y="223" text-anchor="middle" class="tl1">Postgres</text><text x="895" y="243" text-anchor="middle" class="tl2">urls table</text><text x="895" y="261" text-anchor="middle" class="tl2">PK short_code</text>
+      <rect x="820" y="350" width="150" height="64" rx="8" class="na"/><text x="895" y="377" text-anchor="middle" class="tl1">Redis counter</text><text x="895" y="396" text-anchor="middle" class="tl2">INCRBY 1000</text>
+
+      <path d="M150 230 H187" class="e" marker-end="url(#am)"/>
+      <path d="M190 262 H153" class="e dash" marker-end="url(#am)"/>
+      <text x="170" y="300" text-anchor="middle" class="tl2">302</text>
+      <path d="M340 238 H377" class="e" marker-end="url(#am)"/>
+      <text x="360" y="190" text-anchor="middle" class="tl2">miss</text>
+      <path d="M520 225 L567 135" class="et" marker-end="url(#at)"/>
+      <text x="575" y="190" class="tt">reads</text>
+      <path d="M520 252 L567 345" class="et" marker-end="url(#at)"/>
+      <text x="575" y="300" class="tt">writes</text>
+      <path d="M740 105 L817 70" class="ea" marker-end="url(#aa)"/>
+      <text x="790" y="112" class="ta">hit?</text>
+      <path d="M740 145 L817 215" class="eb" marker-end="url(#ab)"/>
+      <text x="748" y="205" class="tb">miss</text>
+      <path d="M740 335 L817 265" class="eb" marker-end="url(#ab)"/>
+      <text x="792" y="322" class="tb">insert</text>
+      <path d="M740 370 L817 382" class="ea" marker-end="url(#aa)"/>
+      <text x="778" y="412" text-anchor="middle" class="ta">ID block</text>
+    </svg>
+    </div>
+    <figcaption>Read and write paths are separate services because their load is wildly different: about 1,000 reads for every write. Redis plays two roles here: a cache for reads and an atomic counter for writes.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>A <b>Postgres</b> table with <code>short_code</code> as the primary key is all the storage we need: one row per link, looked up by one key. A background job deletes (or just flags) expired rows. The cache entry for a link gets a TTL (time to live) no longer than the link's own expiry, so an expired link can't hang around in Redis after the database says it's dead.</p></div>
+</section>
+
+<!-- CREATE -->
+<section id="create">
+  <div class="head"><span class="eyebrow">Step 4</span><h2>What happens when you shorten a link</h2>
+    <p class="lede">Follow the numbers. Most of the time the write service doesn't even talk to Redis, because it already holds a block of IDs.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 390" role="img" aria-label="Create short URL sequence">
+      <rect x="25" y="16" width="110" height="44" rx="8" class="n"/><text x="80" y="43" text-anchor="middle" class="tl1">Client</text>
+      <rect x="230" y="16" width="140" height="44" rx="8" class="nt"/><text x="300" y="43" text-anchor="middle" class="tl1">Write service</text>
+      <rect x="470" y="16" width="140" height="44" rx="8" class="na"/><text x="540" y="43" text-anchor="middle" class="tl1">Redis counter</text>
+      <rect x="720" y="16" width="120" height="44" rx="8" class="nb"/><text x="780" y="43" text-anchor="middle" class="tl1">Postgres</text>
+      <path d="M80 60 V375 M300 60 V375 M540 60 V375 M780 60 V375" class="life"/>
+
+      <path d="M80 100 H296" class="e" marker-end="url(#am)"/><text x="190" y="93" text-anchor="middle" class="tlb">1 POST /urls + long_url</text>
+      <rect x="225" y="116" width="150" height="32" rx="6" class="nt"/><text x="300" y="137" text-anchor="middle" class="tlb">2 validate URL</text>
+      <path d="M300 185 H536" class="ea" marker-end="url(#aa)"/><text x="420" y="178" text-anchor="middle" class="ta">3 next ID (block empty?)</text>
+      <path d="M540 225 H304" class="ea dash" marker-end="url(#aa)"/><text x="420" y="218" text-anchor="middle" class="ta">4 block start: 1,000,000,000</text>
+      <rect x="220" y="243" width="160" height="32" rx="6" class="nt"/><text x="300" y="264" text-anchor="middle" class="tlb">5 base62 → 15ftgG</text>
+      <path d="M300 310 H776" class="eb" marker-end="url(#ab)"/><text x="540" y="303" text-anchor="middle" class="tb">6 INSERT, short_code is UNIQUE</text>
+      <path d="M300 350 H84" class="e dash" marker-end="url(#am)"/><text x="190" y="343" text-anchor="middle" class="tlb">7 short.ly/15ftgG</text>
+    </svg>
+    </div>
+    <figcaption>With a custom alias, steps 3 to 5 are skipped: the server just checks the alias is free. To stop an alias ever clashing with a generated code, generated codes can live in their own namespace (for example, a prefix character aliases are not allowed to use).</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Should the same long URL always get the same short code? Most real shorteners say no: two people shortening the same page may want different expiry dates, aliases or stats. So I skip deduplication and let one long URL have many codes. The AlgoMaster write-up adds a useful rule for aliases: keep a <b>reserved word list</b> (<code>admin</code>, <code>api</code>, <code>login</code>) so nobody grabs a path the app itself needs.</p></div>
+</section>
+
+<!-- REDIRECT -->
+<section id="redirect">
+  <div class="head"><span class="eyebrow">Step 5</span><h2>What happens when you click a short link</h2>
+    <p class="lede">This is the path that runs a thousand times more often, so this is where the effort goes.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 490" role="img" aria-label="Redirect sequence">
+      <rect x="15" y="16" width="110" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="170" y="16" width="120" height="44" rx="8" class="na"/><text x="230" y="43" text-anchor="middle" class="tl1">CDN / edge</text>
+      <rect x="335" y="16" width="130" height="44" rx="8" class="nt"/><text x="400" y="43" text-anchor="middle" class="tl1">Read service</text>
+      <rect x="510" y="16" width="120" height="44" rx="8" class="na"/><text x="570" y="43" text-anchor="middle" class="tl1">Redis cache</text>
+      <rect x="675" y="16" width="110" height="44" rx="8" class="nb"/><text x="730" y="43" text-anchor="middle" class="tl1">Postgres</text>
+      <rect x="815" y="16" width="110" height="44" rx="8" class="n"/><text x="870" y="43" text-anchor="middle" class="tl1">Target site</text>
+      <path d="M70 60 V480 M230 60 V480 M400 60 V480 M570 60 V480 M730 60 V480 M870 60 V480" class="life"/>
+
+      <path d="M70 100 H226" class="e" marker-end="url(#am)"/><text x="150" y="93" text-anchor="middle" class="tlb">1 GET /15ftgG</text>
+      <path d="M230 140 H396" class="e" marker-end="url(#am)"/><text x="315" y="133" text-anchor="middle" class="tlb">2 edge miss</text>
+      <path d="M400 180 H566" class="ea" marker-end="url(#aa)"/><text x="485" y="173" text-anchor="middle" class="ta">3 GET 15ftgG</text>
+      <path d="M570 220 H404" class="ea dash" marker-end="url(#aa)"/><text x="485" y="213" text-anchor="middle" class="ta">4 miss</text>
+      <path d="M400 260 H726" class="eb" marker-end="url(#ab)"/><text x="563" y="253" text-anchor="middle" class="tb">5 SELECT by short_code</text>
+      <path d="M730 300 H404" class="eb dash" marker-end="url(#ab)"/><text x="565" y="293" text-anchor="middle" class="tb">6 long_url, expires_at</text>
+      <rect x="335" y="316" width="130" height="30" rx="6" class="nt"/><text x="400" y="336" text-anchor="middle" class="tlb">7 check expiry</text>
+      <path d="M400 380 H566" class="ea" marker-end="url(#aa)"/><text x="485" y="373" text-anchor="middle" class="ta">8 SET, TTL ≤ expiry</text>
+      <path d="M400 420 H74" class="e dash" marker-end="url(#am)"/><text x="315" y="413" text-anchor="middle" class="tlb">9 302 + Location</text>
+      <path d="M70 460 H866" class="e" marker-end="url(#am)"/><text x="470" y="453" text-anchor="middle" class="tlb">10 browser follows to the long URL</text>
+    </svg>
+    </div>
+    <figcaption>This is the slow path: a cache miss. On a cache hit, steps 5 to 8 vanish. On an edge hit, the request never even reaches the read service.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="301 versus 302 redirects">
+      <rect x="20" y="16" width="420" height="230" rx="10" class="n"/>
+      <text x="40" y="44" class="tl1">301 Moved Permanently</text>
+      <rect x="40" y="66" width="110" height="44" rx="8" class="n"/><text x="95" y="93" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="290" y="66" width="130" height="44" rx="8" class="nt"/><text x="355" y="93" text-anchor="middle" class="tl1">short.ly</text>
+      <path d="M150 88 H287" class="e" marker-end="url(#am)"/><text x="218" y="80" text-anchor="middle" class="tl2">click 1</text>
+      <rect x="40" y="140" width="110" height="44" rx="8" class="n"/><text x="95" y="167" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="290" y="140" width="130" height="44" rx="8" class="nr"/><text x="355" y="167" text-anchor="middle" class="tl1">Browser cache</text>
+      <path d="M150 162 H287" class="er dash" marker-end="url(#ar)"/><text x="218" y="154" text-anchor="middle" class="tl2">click 2+</text>
+      <text x="230" y="222" text-anchor="middle" class="tr">server never sees later clicks</text>
+
+      <rect x="460" y="16" width="420" height="230" rx="10" class="n"/>
+      <text x="480" y="44" class="tl1">302 Found (chosen)</text>
+      <rect x="480" y="66" width="110" height="44" rx="8" class="n"/><text x="535" y="93" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="730" y="66" width="130" height="44" rx="8" class="nt"/><text x="795" y="93" text-anchor="middle" class="tl1">short.ly</text>
+      <path d="M590 88 H727" class="et" marker-end="url(#at)"/><text x="658" y="80" text-anchor="middle" class="tl2">click 1</text>
+      <rect x="480" y="140" width="110" height="44" rx="8" class="n"/><text x="535" y="167" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="730" y="140" width="130" height="44" rx="8" class="nt"/><text x="795" y="167" text-anchor="middle" class="tl1">short.ly</text>
+      <path d="M590 162 H727" class="et" marker-end="url(#at)"/><text x="658" y="154" text-anchor="middle" class="tl2">click 2+</text>
+      <text x="670" y="222" text-anchor="middle" class="tt">server can count, expire, change it</text>
+    </svg>
+    </div>
+    <figcaption>A 301 tells the browser "this will never change, remember it". That saves a request, but then I can't expire the link, change its target, or count clicks.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>302 costs one extra request per click, and that's the point: every click passes through us, so expiry and edits take effect right away. If analytics ever comes back in scope, both extra sources agree on the shape: don't count clicks inside the redirect. AlgoMaster pushes each click event onto a queue like Kafka (the same "do slow work later" idea as the YouTube and LeetCode notes), and the System Design Primer goes even simpler and runs batch MapReduce jobs over the web server logs. Either way the redirect stays fast.</p></div>
+</section>
+
+<!-- CODES -->
+<section id="codes">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Making every short code unique</h2>
+    <p class="lede">The code must be short, must never repeat, and should be cheap to make. Three tries.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Take the URL's first characters</h3><p>The first 8 characters of most links are <code>www.link</code> or <code>https://</code>. Thousands of URLs share a prefix, so they'd all get the same code.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Hash it, keep a slice</h3><p>Clean up the URL, run SHA-256, base62-encode, keep 8 characters (about 218 trillion options). Works, but slices can collide, so every insert needs a check and a retry with a salt (a few random extra bytes mixed in).</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Counter + base62</h3><p>Hand out 1, 2, 3, ... from an atomic counter and write the number in base62. Two links can never get the same number, so there's nothing to check. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Encoding a counter value in base62">
+      <rect x="20" y="20" width="400" height="250" rx="10" class="n"/>
+      <text x="40" y="46" class="tl1">Counter value → base62</text>
+      <text x="40" y="80" class="tlb">1,000,000,000 ÷ 62 = 16,129,032  r 16 → G</text>
+      <text x="40" y="108" class="tlb">16,129,032 ÷ 62 = 260,145  r 42 → g</text>
+      <text x="40" y="136" class="tlb">260,145 ÷ 62 = 4,195  r 55 → t</text>
+      <text x="40" y="164" class="tlb">4,195 ÷ 62 = 67  r 41 → f</text>
+      <text x="40" y="192" class="tlb">67 ÷ 62 = 1  r 5 → 5</text>
+      <text x="40" y="220" class="tlb">1 ÷ 62 = 0  r 1 → 1</text>
+      <text x="40" y="252" class="tl2">read the remainders from bottom to top</text>
+
+      <path d="M420 145 H477" class="ea" marker-end="url(#aa)"/>
+      <rect x="480" y="100" width="160" height="90" rx="8" class="na"/>
+      <text x="560" y="140" text-anchor="middle" class="tl1">15ftgG</text>
+      <text x="560" y="162" text-anchor="middle" class="tl2">6 characters</text>
+
+      <rect x="680" y="30" width="200" height="56" rx="8" class="nt"/><text x="780" y="54" text-anchor="middle" class="tl1">6 characters</text><text x="780" y="72" text-anchor="middle" class="tl2">62⁶ ≈ 56.8 billion</text>
+      <rect x="680" y="117" width="200" height="56" rx="8" class="n"/><text x="780" y="141" text-anchor="middle" class="tl1">7 characters</text><text x="780" y="159" text-anchor="middle" class="tl2">62⁷ ≈ 3.5 trillion</text>
+      <rect x="680" y="204" width="200" height="56" rx="8" class="n"/><text x="780" y="228" text-anchor="middle" class="tl1">8 characters</text><text x="780" y="246" text-anchor="middle" class="tl2">62⁸ ≈ 218 trillion</text>
+      <path d="M640 130 L677 70" class="e dash" marker-end="url(#am)"/>
+      <text x="460" y="292" text-anchor="middle" class="tl2">alphabet: 0-9, A-Z, a-z (62 symbols, URL-safe: no + or /)</text>
+    </svg>
+    </div>
+    <figcaption>The billionth link is still only 6 characters, and 6 characters last until about 56.8 billion links. It's the same repeated division as converting to binary, just with 62 digits instead of 2.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Base62 and not base64, because base64's <code>+</code> and <code>/</code> mean things in a URL (a path separator, and a space in query strings). The counter's one weakness is that codes are <b>predictable</b>: anyone can walk <code>15ftgG</code>, <code>15ftgH</code>, ... and read other people's links. One fix is to scramble the number with a reversible step (for example, XOR with a secret key) before encoding. For comparison, the System Design Primer's version takes the hash route: MD5 of the user's IP plus a timestamp, base62, first 7 characters, and a database check to regenerate on a clash.</p></div>
+</section>
+
+<!-- FAST -->
+<section id="fast">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>Making redirects fast</h2>
+    <p class="lede">Without help, finding one code in a billion rows means scanning the whole table. Three layers fix that.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag good">GOOD</span><h3>Index the code</h3><p>Make <code>short_code</code> the primary key. Postgres builds a B-tree index for it, so a lookup is O(log n), and the key also enforces uniqueness for free. Still a disk read every time.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Redis cache in front</h3><p>Check Redis first. On a miss, read Postgres and fill the cache. Links almost never change, so invalidation (removing stale entries) is easy. Evict with LRU (least recently used). <b>Chosen.</b></p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>CDN + edge code</h3><p>Run the redirect at points of presence close to the user (Cloudflare Workers, Lambda@Edge). Popular links never reach our servers. Costs more and is harder to debug.</p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 240" role="img" aria-label="Memory versus SSD versus HDD latency">
+      <text x="20" y="62" class="tl1">Memory (Redis)</text>
+      <rect x="180" y="46" width="76" height="22" rx="4" class="nt"/>
+      <text x="268" y="62" class="tl2">~100 ns · millions of reads/s</text>
+      <text x="20" y="122" class="tl1">SSD</text>
+      <rect x="180" y="106" width="304" height="22" rx="4" class="nb"/>
+      <text x="496" y="122" class="tl2">~0.1 ms · ~100k IOPS · 1,000× slower</text>
+      <text x="20" y="182" class="tl1">HDD</text>
+      <rect x="180" y="166" width="456" height="22" rx="4" class="nr"/>
+      <text x="648" y="182" class="tl2">~10 ms · 100-200 IOPS</text>
+      <text x="180" y="224" class="tl2">bar length on a log scale · IOPS = input/output operations per second</text>
+    </svg>
+    </div>
+    <figcaption>Memory is about 1,000× faster than an SSD and about 100,000× faster than a spinning disk. That gap is why a cache in front of the database matters so much here.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Clicks are very uneven: a few links get most of the traffic. AlgoMaster applies the 80/20 rule here and works out that caching the hottest 20% of a day's links in its (smaller) example fits in about 25 MB of memory. Rows are tiny, so even a generous cache is cheap. The CDN layer is the same trick as YouTube's video segments, just with 100-byte answers instead of megabytes.</p></div>
+</section>
+
+<!-- SCALE -->
+<section id="scale">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>Scaling to 1 billion links</h2>
+    <p class="lede">Two quick estimates decide most of this: how much data, and how many requests.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="Storage and traffic estimates">
+      <rect x="20" y="20" width="140" height="70" rx="8" class="n"/><text x="90" y="50" text-anchor="middle" class="tl1">1 billion</text><text x="90" y="70" text-anchor="middle" class="tl2">URLs stored</text>
+      <text x="180" y="60" text-anchor="middle" class="tl1">×</text>
+      <rect x="200" y="20" width="140" height="70" rx="8" class="n"/><text x="270" y="50" text-anchor="middle" class="tl1">~500 B</text><text x="270" y="70" text-anchor="middle" class="tl2">per row, padded</text>
+      <text x="360" y="60" text-anchor="middle" class="tl1">=</text>
+      <rect x="380" y="20" width="140" height="70" rx="8" class="nb"/><text x="450" y="50" text-anchor="middle" class="tl1">~500 GB</text><text x="450" y="70" text-anchor="middle" class="tl2">in total</text>
+      <text x="540" y="60" text-anchor="middle" class="tl1">→</text>
+      <rect x="560" y="20" width="140" height="70" rx="8" class="nt"/><text x="630" y="50" text-anchor="middle" class="tl1">One Postgres</text><text x="630" y="70" text-anchor="middle" class="tl2">fits on one SSD</text>
+
+      <rect x="20" y="140" width="140" height="70" rx="8" class="n"/><text x="90" y="170" text-anchor="middle" class="tl1">100M</text><text x="90" y="190" text-anchor="middle" class="tl2">daily users</text>
+      <text x="180" y="180" text-anchor="middle" class="tl1">×</text>
+      <rect x="200" y="140" width="140" height="70" rx="8" class="n"/><text x="270" y="170" text-anchor="middle" class="tl1">5</text><text x="270" y="190" text-anchor="middle" class="tl2">redirects each</text>
+      <text x="360" y="180" text-anchor="middle" class="tl1">=</text>
+      <rect x="380" y="140" width="140" height="70" rx="8" class="n"/><text x="450" y="170" text-anchor="middle" class="tl1">~5,787 / s</text><text x="450" y="190" text-anchor="middle" class="tl2">on average</text>
+      <text x="540" y="180" text-anchor="middle" class="tl1">×</text>
+      <rect x="560" y="140" width="140" height="70" rx="8" class="n"/><text x="630" y="170" text-anchor="middle" class="tl1">100</text><text x="630" y="190" text-anchor="middle" class="tl2">peak factor</text>
+      <text x="720" y="180" text-anchor="middle" class="tl1">=</text>
+      <rect x="740" y="140" width="140" height="70" rx="8" class="na"/><text x="810" y="170" text-anchor="middle" class="tl1">~600k / s</text><text x="810" y="190" text-anchor="middle" class="tl2">at peak</text>
+      <text x="450" y="244" text-anchor="middle" class="tl2">writes: ~100k new links a day ≈ 1 per second, tiny next to the reads</text>
+    </svg>
+    </div>
+    <figcaption>A real row is about 200 bytes (code, long URL, alias, two timestamps); rounding up to 500 leaves room for extras like creator ID. All of these are rough estimates, but the conclusion is clear: storage is easy, reads are the problem.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Option</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>One server does everything</td><td><span class="tag bad">BAD</span></td><td>Reads and writes compete, and you can't scale one without the other</td></tr>
+      <tr><td>Split read and write services</td><td><span class="tag great">GREAT</span></td><td>Many read instances, a few write instances, each behind a load balancer. <b>Chosen.</b></td></tr>
+      <tr><td>Database replicas + backups</td><td><span class="tag good">GOOD</span></td><td>Replicas take over if the primary dies (and can serve cache misses); backups protect against bad deletes. More to operate.</td></tr>
+      <tr><td>Sharding from day one</td><td><span class="tag bad">BAD</span></td><td>500 GB fits on one machine. Shard (for example with consistent hashing) only when hardware runs out.</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>At about 1 write per second, any database works: Postgres, MySQL or DynamoDB. The advice is to pick the one you know, and default to Postgres. For me that's a relief: the same Postgres or MySQL I use with Laravel and Django every day is enough for a billion-link service, as long as the cache takes the reads.</p></div>
+</section>
+
+<!-- COUNTER -->
+<section id="counter">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>One counter, many servers</h2>
+    <p class="lede">Once there are several write instances, a counter in each server's memory would hand out the same numbers twice. The counter has to live in one shared place.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 320" role="img" aria-label="Counter batching across write instances">
+      <rect x="20" y="120" width="180" height="90" rx="8" class="na"/>
+      <text x="110" y="148" text-anchor="middle" class="tl1">Redis counter</text>
+      <text x="110" y="170" text-anchor="middle" class="tl2">INCRBY counter 1000</text>
+      <text x="110" y="188" text-anchor="middle" class="tl2">Sentinel failover</text>
+
+      <rect x="330" y="30" width="260" height="64" rx="8" class="nt"/><text x="460" y="56" text-anchor="middle" class="tl1">Write instance A</text><text x="460" y="76" text-anchor="middle" class="tl2">using IDs 0 - 999</text>
+      <rect x="330" y="133" width="260" height="64" rx="8" class="nt"/><text x="460" y="159" text-anchor="middle" class="tl1">Write instance B</text><text x="460" y="179" text-anchor="middle" class="tl2">using IDs 1,000 - 1,999</text>
+      <rect x="330" y="236" width="260" height="64" rx="8" class="nt"/><text x="460" y="262" text-anchor="middle" class="tl1">Write instance C</text><text x="460" y="282" text-anchor="middle" class="tl2">using IDs 2,000 - 2,999</text>
+
+      <path d="M200 145 L327 62" class="ea" marker-end="url(#aa)"/>
+      <path d="M200 165 H327" class="ea" marker-end="url(#aa)"/>
+      <path d="M200 185 L327 268" class="ea" marker-end="url(#aa)"/>
+      <text x="263" y="155" text-anchor="middle" class="ta">+1000 each</text>
+
+      <rect x="680" y="120" width="200" height="90" rx="8" class="nb"/>
+      <text x="780" y="148" text-anchor="middle" class="tl1">Postgres</text>
+      <text x="780" y="170" text-anchor="middle" class="tl2">UNIQUE short_code</text>
+      <text x="780" y="188" text-anchor="middle" class="tl2">final safety net</text>
+      <path d="M590 62 L677 140" class="eb" marker-end="url(#ab)"/>
+      <path d="M590 165 H677" class="eb" marker-end="url(#ab)"/>
+      <path d="M590 268 L677 190" class="eb" marker-end="url(#ab)"/>
+      <text x="633" y="155" text-anchor="middle" class="tb">INSERT</text>
+    </svg>
+    </div>
+    <figcaption>Each instance grabs a block of 1,000 IDs in one atomic call, then spends them locally. Redis gets one request per 1,000 links instead of one per link.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><h3>Why Redis is safe here</h3><p>Redis runs commands one at a time on a single thread, so <code>INCR</code> is atomic: two callers at the same moment get 1000 and 1001, never both 1000. One instance handles 100k+ operations a second.</p></div>
+    <div class="card"><h3>Many regions</h3><p>Give each region its own range: region A uses 0 to 1 billion, region B uses 1 to 2 billion. Writes hit the local Redis; reads are served everywhere from caches.</p></div>
+    <div class="card"><h3>When Redis crashes</h3><p>Sentinel (or Redis Cluster) fails over to a replica. If a few counter values are lost, the result is a gap in the numbers. Gaps are fine: we need unique codes, not continuous ones.</p></div>
+  </div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>It's the same idea as the LeetCode leaderboard: let Redis's single-threaded, atomic commands handle the concurrency so my app code doesn't have to. And just like the rate limiter note, the shared state lives in one fast store while the app servers stay stateless. If something still slips through (say a failover hands out a used block), the <code>UNIQUE</code> constraint in Postgres rejects the duplicate instead of silently overwriting a link.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>302 redirect</b></td><td>301 permanent</td><td>Every click reaches us, so links can expire, change and be counted</td></tr>
+      <tr><td><b>Counter + base62</b></td><td>URL prefix, hash + slice</td><td>Unique by construction, no collision checks, 6 characters for a billion links</td></tr>
+      <tr><td><b>Redis INCRBY in blocks of 1,000</b></td><td>Per-server counters, one call per link</td><td>Atomic and shared, with very few network calls</td></tr>
+      <tr><td><b>short_code as primary key</b></td><td>Separate ID + extra index</td><td>Free B-tree index and a uniqueness guarantee in one</td></tr>
+      <tr><td><b>Redis cache (+ optional CDN)</b></td><td>Database only</td><td>~600k reads/s at peak; memory is ~1,000× faster than SSD</td></tr>
+      <tr><td><b>Separate read and write services</b></td><td>One server</td><td>1,000:1 load difference, so scale them separately</td></tr>
+      <tr><td><b>Single Postgres</b></td><td>MySQL, DynamoDB, early sharding</td><td>~500 GB and ~1 write/s fit one machine; familiar tool</td></tr>
+      <tr><td><b>Counter ranges per region</b></td><td>One global counter</td><td>No cross-region call on every write</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>The "faster" redirect is wrong</h3><p>I'd have picked 301 because the browser caches it. That's exactly the problem: once cached, I lose control of the link forever.</p></div>
+    <div class="card"><h3>It's base conversion</h3><p>The core trick is converting a number to base 62, something I've done in contest problems a hundred times. I didn't expect it to be the heart of a real product.</p></div>
+    <div class="card"><h3>Gaps are fine</h3><p>My first instinct was to protect the counter from losing values. But nobody needs IDs to be continuous, only unique, and that makes failures much cheaper.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why use 302 instead of 301 for the redirect?</summary><p>A 301 is cached by the browser, so later clicks skip our server. Then the link can't be expired, edited or counted. A 302 sends every click through us, at the cost of one extra request.</p></details>
+    <details><summary>Why not just use the first 8 characters of the long URL?</summary><p>Huge numbers of URLs start the same way (<code>https://</code>, <code>www.</code>, the same domain). They would all get the same code, which breaks the "one code, one URL" rule.</p></details>
+    <details><summary>What does the counter approach give up compared to hashing?</summary><p>Predictability: sequential codes can be guessed and enumerated. It also needs a shared counter. A reversible scramble (like XOR with a secret) before encoding hides the order.</p></details>
+    <details><summary>Two write servers ask Redis for the next ID at the same instant. Can they get the same one?</summary><p>No. Redis executes commands one at a time on a single thread, so <code>INCR</code> / <code>INCRBY</code> are atomic. Each caller gets a different value (or a different block).</p></details>
+    <details><summary>Redis crashes and the last few counter values are lost. Is that a problem?</summary><p>Not really. Skipped values only leave gaps, and gaps are harmless because codes need to be unique, not continuous. If a lagging replica ever hands out a value that was already used, the <code>UNIQUE</code> constraint in Postgres rejects the insert and the server just takes the next ID.</p></details>
+    <details><summary>Why must the cache TTL be no longer than the link's expiry?</summary><p>Otherwise Redis could keep redirecting to a link the database already considers expired. With TTL ≤ expiry, the cache entry disappears on its own in time.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>HTTP 301 vs 302, 404 vs 410</li>
+      <li>Base62 encoding</li>
+      <li>Hashing and collision handling</li>
+      <li>Atomic counters (Redis INCR)</li>
+      <li>B-tree indexes and primary keys</li>
+      <li>Cache-aside with TTL and LRU</li>
+      <li>CDN and edge computing</li>
+      <li>Read/write service split, replication</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">Postgres with a <code>urls</code> table keyed by <code>short_code</code>; insert 1M rows and <code>EXPLAIN ANALYZE</code> a lookup</label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Hit Redis <code>INCR</code> from two terminals in a loop and confirm no number repeats</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Write base62 encode and decode; check that 1,000,000,000 becomes <code>15ftgG</code></label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Tiny Laravel or Django shortener + Redis cache-aside; compare hit vs miss latency</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Return 301 vs 302 and watch the browser's network tab on the second click</label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Cache with <code>SET key val EX 60</code> and watch the entry expire</label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Browser → CDN → load balancer → read / write services</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The 10-step redirect flow with a cache miss</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">301 vs 302, and why 302 wins</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">Converting 1,000,000,000 to base62</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">The 500 GB and 600k/s estimates</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Redis counter handing out blocks to write instances</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly" target="_blank" rel="noopener">Hello Interview's Bitly breakdown</a>, plus the <a href="https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/pastebin/README.md" target="_blank" rel="noopener">System Design Primer's Pastebin / Bit.ly solution</a> and <a href="https://blog.algomaster.io/p/design-a-url-shortener" target="_blank" rel="noopener">AlgoMaster's "Design a URL Shortener"</a>. The numbers are rough estimates for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('bl-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('bl-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

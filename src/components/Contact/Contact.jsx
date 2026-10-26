@@ -69,7 +69,7 @@ export default function Contact() {
   return (
     <EditorialSection id="contact" className="!pb-10">
       <SectionHeader
-        number="10"
+        number="11"
         label="contact"
         title="Let's Work"
         titleEm="Together"

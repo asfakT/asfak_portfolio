@@ -15,6 +15,7 @@ Phone / WhatsApp: +880 1796512473 (secondary: 01635828435)
 GitHub: github.com/asfakT
 LinkedIn: linkedin.com/in/asfak-shahrier
 Medium (blog): medium.com/@shahrierasfak27
+Learning Lab (on this portfolio, /lab): system design case studies with diagrams, written while learning. Topics so far: WhatsApp, YouTube, LeetCode, distributed rate limiter, URL shortener (Bitly), Dropbox, Gopuff, Ticketmaster, Facebook News Feed.
 
 === SUMMARY ===
 Software engineer with hands-on experience building production web apps using Laravel, Angular,

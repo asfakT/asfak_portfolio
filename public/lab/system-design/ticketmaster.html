@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How Ticketmaster sells one seat to exactly one person: a system design learning note by Asfak Shahrier.">
+<meta name="note-topic" content="system-design">
+<meta name="note-track" content="system-design">
+<meta name="note-type" content="case-study">
+<meta name="note-status" content="growing">
+<meta name="note-date" content="2026-10-26">
+<meta name="note-summary" content="Seat locks with a TTL, payment webhooks, a virtual waiting queue and search, with no double booking.">
+<title>How Ticketmaster sells one seat to exactly one person | Asfak Shahrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: notebook-style single column; each section = one version of the design, diagram first, a 'why' note after */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16202c; --muted:#5a6878; --line:#d5dce4;
+  --accent:#c2410c; --accent-bg:#fff1e6;
+  --teal:#0f766e; --teal-bg:#e3f3f0;
+  --blue:#1d4ed8; --blue-bg:#e8eefc;
+  --red:#b91c1c; --red-bg:#fdecec; color-scheme:light;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--blue-bg);color:var(--ink);padding:1px 5px;border-radius:4px}
+a{color:var(--blue)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:700 22px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* toc */
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font:500 12.5px var(--mono);text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+
+/* timeline bar */
+.tl{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);min-width:640px}
+.tl div{padding:10px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.tl div:last-child{border-right:0}
+.tl b{font:600 13px var(--sans)}
+.tl .m{font:500 11px var(--mono);color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* diagram frame */
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+figure .scroll svg{display:block;min-width:720px;width:100%;height:auto}
+figure.small .scroll svg{min-width:420px}
+figcaption{font-size:13px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+
+/* svg styles */
+svg text{font-family:var(--sans)}
+.n{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.na{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.5}
+.nt{fill:var(--teal-bg);stroke:var(--teal);stroke-width:1.5}
+.nb{fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.5}
+.nr{fill:var(--red-bg);stroke:var(--red);stroke-width:1.5}
+.tl1{fill:var(--ink);font:600 13px var(--sans)}
+.tl2{fill:var(--muted);font:11px var(--mono)}
+.tlb{fill:var(--ink);font:500 11.5px var(--mono)}
+.ta{fill:var(--accent);font:600 11.5px var(--mono)}
+.tt{fill:var(--teal);font:600 11.5px var(--mono)}
+.tb{fill:var(--blue);font:600 11.5px var(--mono)}
+.tr{fill:var(--red);font:600 11.5px var(--mono)}
+.e{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ea{stroke:var(--accent);stroke-width:1.8;fill:none}
+.et{stroke:var(--teal);stroke-width:1.8;fill:none}
+.eb{stroke:var(--blue);stroke-width:1.8;fill:none}
+.er{stroke:var(--red);stroke-width:1.8;fill:none}
+.dash{stroke-dasharray:6 5}
+.life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.badge{fill:var(--accent)}
+.badget{fill:var(--panel);font:700 11px var(--mono)}
+.mk-m{fill:var(--muted)} .mk-a{fill:var(--accent)} .mk-t{fill:var(--teal)} .mk-b{fill:var(--blue)} .mk-r{fill:var(--red)}
+
+/* legend list */
+ol.steps{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px;font-size:14px}
+ol.steps li::marker{font:600 13px var(--mono);color:var(--accent)}
+
+/* mentor note */
+.note{border:1px solid var(--accent);background:var(--accent-bg);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.note .who{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 12.5px var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.byline{font-size:14px;color:var(--muted)}
+.learn{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;font-size:14.5px}
+.journey{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;min-width:680px}
+.journey div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.journey b{font:700 12px var(--mono);color:var(--accent)}
+.journey span{font-size:13.5px}
+.note p{max-width:none}
+
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.tag{align-self:flex-start;font:600 11px var(--mono);padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.bad{background:var(--red-bg);color:var(--red)}
+.good{background:var(--blue-bg);color:var(--blue)}
+.great{background:var(--teal-bg);color:var(--teal)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);min-width:600px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+.tbox{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.tbox table{border:0}
+tr:last-child td{border-bottom:0}
+
+/* data model */
+.schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font:13px var(--mono)}
+.tbl h4{margin:0;padding:8px 12px;font:600 13px var(--mono);background:var(--blue-bg);color:var(--ink);border-bottom:1px solid var(--line)}
+.tbl div{padding:5px 12px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px}
+.tbl div:last-child{border-bottom:0}
+.tbl .k{color:var(--accent);font-weight:600}
+.tbl small{color:var(--muted)}
+
+/* qa */
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+details[open]{border-color:var(--teal)}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+details p{margin-top:8px;color:var(--ink)}
+.qa{display:flex;flex-direction:column;gap:8px}
+
+.check{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 20px;margin:0;padding:0;list-style:none}
+.check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.check input{margin-top:5px;accent-color:var(--teal)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (min-width:820px){.wide{grid-column:span 2}}
+</style>
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-m"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-a"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-t"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-r"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p style="margin:0"><a href="/lab" style="font:500 13px var(--mono);text-decoration:none">&larr; Learning Lab</a></p>
+  <span class="eyebrow">Learning Lab · System Design</span>
+  <h1>How Ticketmaster sells one seat to exactly one person</h1>
+  <p class="byline">By Asfak Shahrier</p>
+  <div class="meta"><span>Track <b>System design</b></span><span>Level <b>Case study</b></span><span>Status <b>Growing</b></span><span>About <b>22 min</b> read</span></div>
+  <p class="lede">I've wired Stripe checkout into a Laravel ticketing platform before, so the payment half of this problem felt familiar. The other half did not: ten million people pressing "Buy" for the same concert, and every seat must go to exactly one of them. A seat map that lies, or a seat sold twice, is a real person crying outside a stadium. These notes rebuild the system one problem at a time, from a single database transaction to a waiting room.</p>
+  <h3>What you'll learn</h3>
+  <ul class="learn">
+    <li>Why booking needs consistency but browsing can relax</li>
+    <li>How a Redis lock with a 10-minute TTL holds a seat while you pay</li>
+    <li>Why two buyers can never win the same seat, even in a race</li>
+    <li>How Stripe webhooks confirm a booking safely, even when retried</li>
+    <li>How a virtual waiting queue keeps a huge on-sale calm and fair</li>
+    <li>Why search moves to Elasticsearch, fed by change data capture</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>10M</b><span>users chasing one event</span></div>
+    <div class="stat"><b>100 : 1</b><span>reads to writes</span></div>
+    <div class="stat"><b>&lt; 500 ms</b><span>search latency target</span></div>
+    <div class="stat"><b>10 min</b><span>a seat is held while you pay</span></div>
+    <div class="stat"><b>24 h</b><span>example TTL for cached searches</span></div>
+    <div class="stat"><b>20 s</b><span>waiting-room page refresh (Cloudflare)</span></div>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#plan">How this case study is built</a><a href="#req">Requirements</a><a href="#api">Entities &amp; API</a>
+    <a href="#hld">Architecture</a><a href="#reserve">Holding a seat</a><a href="#checkout">Checkout flow</a>
+    <a href="#reads">Scaling reads</a><a href="#queue">Waiting queue</a><a href="#search">Search</a>
+    <a href="#decisions">Decisions</a><a href="#surprised">What surprised me</a><a href="#quiz">Try it yourself</a><a href="#concepts">Concepts &amp; labs</a><a href="#memory">Draw it from memory</a>
+  </nav>
+</header>
+
+<!-- PLAN -->
+<section id="plan">
+  <div class="head"><span class="eyebrow">Before we start</span><h2>How this case study is built</h2>
+    <p class="lede">Five versions, each fixing what the last one couldn't handle.</p></div>
+  <div class="scroll"><div class="journey">
+    <div><b>v1</b><span>View and book in one Postgres transaction</span></div>
+    <div><b>v2</b><span>Hold seats during checkout with a Redis lock + TTL</span></div>
+    <div><b>v3</b><span>Pay with Stripe, confirm by webhook</span></div>
+    <div><b>v4</b><span>Survive the rush: caching + a virtual waiting queue</span></div>
+    <div><b>v5</b><span>Fast, typo-friendly search with Elasticsearch</span></div>
+  </div></div>
+  <div class="note"><span class="who">Why this order</span>
+    <p>WhatsApp was about delivering messages, YouTube about moving huge files, LeetCode about running strangers' code. Ticketmaster is about <b>one scarce thing that many people want at the same moment</b>. So the order follows the money: first make sure a seat can never be sold twice, then make checkout pleasant, and only then worry about the crowd and the search box.</p></div>
+</section>
+
+<!-- REQUIREMENTS -->
+<section id="req">
+  <div class="head"><span class="eyebrow">Step 1</span><h2>What the system must do</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Functional</h3><ul>
+      <li>View an event, with a seat map showing what's free</li>
+      <li>Search for events</li>
+      <li>Book tickets for an event</li></ul></div>
+    <div class="card"><h3>Non-functional</h3><ul>
+      <li>Availability for viewing and search</li>
+      <li>Consistency for booking: no double booking</li>
+      <li>About 10M users on one popular event</li>
+      <li>Search under 500 ms</li>
+      <li>Read-heavy, around 100 reads per write</li></ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul>
+      <li>"My tickets" page and admin tools for adding events</li>
+      <li>Dynamic pricing</li>
+      <li>GDPR, backups, CI/CD</li>
+      <li>Fault tolerance and payment security in depth</li></ul></div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="head"><span class="eyebrow">Step 2</span><h2>Entities and API</h2>
+    <p class="lede">Entities: <b>Event</b> (date, description, type), <b>Venue</b> (address, capacity, seat map), <b>Performer</b>, <b>Ticket</b> (one per seat: section, row, seat, price, status), <b>Booking</b> (user, ticket IDs, total, status) and <b>User</b>.</p></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /events/:eventId</code></td><td>Nothing</td><td>Event, Venue, Performer and the Ticket list that draws the seat map</td></tr>
+      <tr><td><code>GET /events/search?keyword&amp;start&amp;end&amp;pageSize&amp;page</code></td><td>Keyword, date range, paging</td><td>A page of events</td></tr>
+      <tr><td><code>POST /bookings/:eventId</code></td><td><code>ticketIds</code></td><td>A <code>bookingId</code>; the seats are now held</td></tr>
+      <tr><td><code>POST /bookings/:bookingId/pay</code> (my naming)</td><td>Stripe payment token</td><td>Payment started; confirmation arrives later via webhook</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>The first version had a single <code>POST /bookings</code> that took seats and card details together. The flaw: you type your card number, press Pay, and learn the seat was gone all along. Splitting it into <b>reserve</b> then <b>pay</b> means the seat is yours before you reach for your wallet. A <b>Booking</b> exists separately from <b>Ticket</b> because one order can hold four seats that share one payment.</p></div>
+</section>
+
+<!-- HLD -->
+<section id="hld">
+  <div class="head"><span class="eyebrow">Step 3</span><h2>The full architecture at a glance</h2>
+    <p class="lede">The map we're building toward. Each later section zooms into one corner of it.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 980 520" role="img" aria-label="Ticketmaster architecture">
+      <rect x="20" y="60" width="130" height="64" rx="8" class="n"/><text x="85" y="88" text-anchor="middle" class="tl1">CDN</text><text x="85" y="107" text-anchor="middle" class="tl2">edge cache</text>
+      <rect x="20" y="210" width="130" height="70" rx="8" class="n"/><text x="85" y="240" text-anchor="middle" class="tl1">Client</text><text x="85" y="259" text-anchor="middle" class="tl2">web · mobile</text>
+      <path d="M85 210 V127" class="e dash" marker-end="url(#am)"/>
+      <text x="95" y="172" class="tl2">cached</text>
+
+      <rect x="190" y="210" width="150" height="70" rx="8" class="nt"/><text x="265" y="240" text-anchor="middle" class="tl1">API Gateway</text><text x="265" y="259" text-anchor="middle" class="tl2">auth · rate limit</text>
+      <path d="M150 245 H187" class="e" marker-end="url(#am)"/>
+
+      <rect x="400" y="40" width="170" height="60" rx="8" class="nt"/><text x="485" y="66" text-anchor="middle" class="tl1">Event Service</text><text x="485" y="84" text-anchor="middle" class="tl2">stateless</text>
+      <rect x="400" y="160" width="170" height="60" rx="8" class="nt"/><text x="485" y="186" text-anchor="middle" class="tl1">Search Service</text><text x="485" y="204" text-anchor="middle" class="tl2">keyword · dates</text>
+      <rect x="400" y="280" width="170" height="60" rx="8" class="nt"/><text x="485" y="306" text-anchor="middle" class="tl1">Booking Service</text><text x="485" y="324" text-anchor="middle" class="tl2">reserve · confirm</text>
+      <path d="M340 235 L397 75 M340 245 L397 190 M340 255 L397 305" class="e" marker-end="url(#am)"/>
+
+      <rect x="640" y="40" width="170" height="60" rx="8" class="na"/><text x="725" y="66" text-anchor="middle" class="tl1">Event cache</text><text x="725" y="84" text-anchor="middle" class="tl2">Redis · read-through</text>
+      <rect x="640" y="160" width="170" height="60" rx="8" class="nb"/><text x="725" y="186" text-anchor="middle" class="tl1">Elasticsearch</text><text x="725" y="204" text-anchor="middle" class="tl2">inverted index</text>
+      <rect x="640" y="280" width="170" height="60" rx="8" class="na"/><text x="725" y="306" text-anchor="middle" class="tl1">Redis</text><text x="725" y="324" text-anchor="middle" class="tl2">locks · wait queue</text>
+      <path d="M570 70 H637" class="ea" marker-end="url(#aa)"/>
+      <path d="M570 190 H637" class="eb" marker-end="url(#ab)"/>
+      <path d="M570 305 H637" class="ea" marker-end="url(#aa)"/>
+      <text x="604" y="296" text-anchor="middle" class="ta">lock</text>
+
+      <rect x="400" y="410" width="300" height="80" rx="8" class="nb"/>
+      <text x="550" y="436" text-anchor="middle" class="tl1">PostgreSQL</text>
+      <text x="550" y="458" text-anchor="middle" class="tlb">Events · Venues · Tickets · Bookings</text>
+      <text x="550" y="476" text-anchor="middle" class="tl2">ACID transactions · OCC</text>
+      <path d="M440 340 V407" class="eb" marker-end="url(#ab)"/>
+
+      <rect x="740" y="420" width="130" height="60" rx="8" class="n"/><text x="805" y="446" text-anchor="middle" class="tl1">Stripe</text><text x="805" y="464" text-anchor="middle" class="tl2">payments</text>
+      <path d="M540 340 V375 H805 V417" class="e" marker-start="url(#am)" marker-end="url(#am)"/>
+      <text x="680" y="367" text-anchor="middle" class="tl2">pay · webhook</text>
+
+      <path d="M650 490 V505 H920 V190 H813" class="eb dash" marker-end="url(#ab)"/>
+      <text x="930" y="340" class="tb">CDC</text>
+    </svg>
+    </div>
+    <figcaption>Three small services behind one gateway. The Event Service reads through a Redis cache and falls back to Postgres on a miss. Postgres is the single source of truth; Elasticsearch is a copy kept fresh by change data capture (CDC). Redis does double duty: seat locks and the waiting queue.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Events, tickets and bookings live in <b>one PostgreSQL database</b> on purpose. They are tightly linked, and "mark these tickets sold and confirm this booking" must happen as one all-or-nothing transaction (that's what ACID gives us). Splitting them across services and databases would turn a single transaction into a distributed headache for no real gain.</p></div>
+</section>
+
+<!-- RESERVE -->
+<section id="reserve">
+  <div class="head"><span class="eyebrow">Deep dive 1</span><h2>Holding a seat while someone pays</h2>
+    <p class="lede">Checkout takes minutes. During those minutes the seat must look taken to everyone else, and it must come back on its own if the buyer walks away.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag bad">BAD</span><h3>Hold a row lock in Postgres</h3><p><code>SELECT ... FOR UPDATE</code> inside a transaction that stays open until payment finishes. Long transactions pile up locks, risk deadlocks, and an abandoned tab can keep a seat locked far too long.</p></div>
+    <div class="card"><span class="tag good">GOOD</span><h3>Status + expiry + cron job</h3><p>Mark the ticket RESERVED with a timestamp; a cron job frees expired ones. It works, but seats come back late (only when the job runs), and if the job dies, seats stay stuck.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Expiry checked on read</h3><p>A seat counts as free if it's AVAILABLE, or RESERVED with an expiry in the past. A short transaction claims it for 10 minutes. Correct with no cron, at the cost of slightly heavier queries (a compound index helps).</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Redis lock with a TTL</h3><p><code>SET ticket:id owner NX EX 600</code>. Redis deletes the key itself after 10 minutes. Postgres only needs two states: AVAILABLE and BOOKED. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 260" role="img" aria-label="Seat state machine with Redis TTL">
+      <text x="450" y="40" text-anchor="middle" class="tl2">Postgres stores only AVAILABLE or BOOKED. The RESERVED state lives in Redis.</text>
+      <rect x="40" y="90" width="180" height="70" rx="8" class="nt"/><text x="130" y="120" text-anchor="middle" class="tl1">AVAILABLE</text><text x="130" y="139" text-anchor="middle" class="tl2">anyone can pick</text>
+      <rect x="360" y="90" width="200" height="70" rx="8" class="na"/><text x="460" y="120" text-anchor="middle" class="tl1">RESERVED</text><text x="460" y="139" text-anchor="middle" class="tl2">lock in Redis, 10 min</text>
+      <rect x="700" y="90" width="170" height="70" rx="8" class="nb"/><text x="785" y="120" text-anchor="middle" class="tl1">BOOKED</text><text x="785" y="139" text-anchor="middle" class="tl2">stored in Postgres</text>
+      <path d="M220 125 H357" class="ea" marker-end="url(#aa)"/>
+      <text x="288" y="115" text-anchor="middle" class="ta">SET NX EX 600</text>
+      <path d="M560 125 H697" class="eb" marker-end="url(#ab)"/>
+      <text x="628" y="115" text-anchor="middle" class="tb">paid (webhook)</text>
+      <path d="M460 160 V210 H130 V163" class="er dash" marker-end="url(#ar)"/>
+      <text x="295" y="232" text-anchor="middle" class="tr">TTL runs out or buyer leaves</text>
+    </svg>
+    </div>
+    <figcaption>No cron job anywhere: the "release" arrow is just Redis deleting a key whose time is up. If the buyer never pays, the seat is back on the map 10 minutes later.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 310" role="img" aria-label="Two buyers race for the same seat">
+      <rect x="40" y="16" width="140" height="44" rx="8" class="n"/><text x="110" y="43" text-anchor="middle" class="tl1">Buyer A</text>
+      <rect x="380" y="16" width="140" height="44" rx="8" class="na"/><text x="450" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <rect x="720" y="16" width="140" height="44" rx="8" class="n"/><text x="790" y="43" text-anchor="middle" class="tl1">Buyer B</text>
+      <path d="M110 60 V250 M450 60 V250 M790 60 V250" class="life"/>
+      <path d="M110 100 H446" class="e" marker-end="url(#am)"/><text x="278" y="92" text-anchor="middle" class="tlb">SET seat:7 A NX EX 600</text>
+      <path d="M790 140 H454" class="e" marker-end="url(#am)"/><text x="620" y="132" text-anchor="middle" class="tlb">SET seat:7 B NX EX 600</text>
+      <path d="M450 190 H114" class="et dash" marker-end="url(#at)"/><text x="280" y="182" text-anchor="middle" class="tt">OK: seat is yours</text>
+      <path d="M450 230 H786" class="er dash" marker-end="url(#ar)"/><text x="620" y="222" text-anchor="middle" class="tr">nil: already held</text>
+      <rect x="300" y="258" width="300" height="40" rx="8" class="nt"/><text x="450" y="283" text-anchor="middle" class="tl1">Only one SET NX can win</text>
+    </svg>
+    </div>
+    <figcaption>Redis runs commands one at a time, so even if both requests land in the same millisecond, one of them sees the key already exists. This is the same race as my rate limiter note (two requests grabbing the last token), and the same cure: make "check and take" a single atomic step.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Postgres has no built-in "delete this row in 10 minutes"; Redis does, and it's fast. For a booking of several seats, take the locks one by one and give back any you got if one fails (a Lua script can do it atomically when the keys sit on the same Redis node). The Redis docs add two habits I'll keep: store a <b>unique random value</b> as the lock's owner, and release with a check-then-delete script so you never delete a lock someone else now holds. They also warn that with async replication, a failover can briefly let two clients hold "the same" lock. That's why the design keeps a safety net: Postgres still guards the final write with OCC (optimistic concurrency: the update only succeeds if the row hasn't changed since you read it), so a seat can't be sold twice even if Redis misbehaves.</p></div>
+</section>
+
+<!-- CHECKOUT -->
+<section id="checkout">
+  <div class="head"><span class="eyebrow">Deep dive 2</span><h2>The checkout flow, step by step</h2>
+    <p class="lede">Follow the numbers. The card number never touches our servers, and the booking is only confirmed when Stripe says the money arrived.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 510" role="img" aria-label="Booking and payment sequence">
+      <rect x="15" y="16" width="110" height="44" rx="8" class="n"/><text x="70" y="43" text-anchor="middle" class="tl1">Browser</text>
+      <rect x="170" y="16" width="150" height="44" rx="8" class="nt"/><text x="245" y="43" text-anchor="middle" class="tl1">Booking Service</text>
+      <rect x="400" y="16" width="110" height="44" rx="8" class="na"/><text x="455" y="43" text-anchor="middle" class="tl1">Redis</text>
+      <rect x="580" y="16" width="130" height="44" rx="8" class="nb"/><text x="645" y="43" text-anchor="middle" class="tl1">PostgreSQL</text>
+      <rect x="800" y="16" width="120" height="44" rx="8" class="n"/><text x="860" y="43" text-anchor="middle" class="tl1">Stripe</text>
+      <path d="M70 60 V495 M245 60 V495 M455 60 V495 M645 60 V495 M860 60 V495" class="life"/>
+
+      <path d="M70 100 H241" class="e" marker-end="url(#am)"/><text x="157" y="92" text-anchor="middle" class="tlb">1 POST /bookings</text>
+      <path d="M245 140 H451" class="ea" marker-end="url(#aa)"/><text x="350" y="132" text-anchor="middle" class="ta">2 lock seats, 10 min</text>
+      <path d="M245 180 H641" class="eb" marker-end="url(#ab)"/><text x="445" y="172" text-anchor="middle" class="tb">3 booking: in-progress</text>
+      <path d="M245 220 H74" class="e dash" marker-end="url(#am)"/><text x="157" y="212" text-anchor="middle" class="tlb">4 bookingId</text>
+      <path d="M70 260 H856" class="e" marker-end="url(#am)"/><text x="460" y="252" text-anchor="middle" class="tlb">5 card → token (Stripe.js)</text>
+      <path d="M70 300 H241" class="e" marker-end="url(#am)"/><text x="157" y="292" text-anchor="middle" class="tlb">6 token + bookingId</text>
+      <path d="M245 340 H856" class="e" marker-end="url(#am)"/><text x="550" y="332" text-anchor="middle" class="tlb">7 create PaymentIntent</text>
+      <path d="M860 380 H249" class="e dash" marker-end="url(#am)"/><text x="550" y="372" text-anchor="middle" class="tlb">8 webhook: payment succeeded</text>
+      <path d="M245 420 H641" class="eb" marker-end="url(#ab)"/><text x="445" y="412" text-anchor="middle" class="tb">9 sold + confirmed (1 txn)</text>
+      <path d="M245 460 H451" class="ea dash" marker-end="url(#aa)"/><text x="350" y="452" text-anchor="middle" class="ta">10 drop the lock</text>
+    </svg>
+    </div>
+    <figcaption>If the buyer gives up after step 4, nothing needs cleaning: the lock simply expires. Step 10 is tidy-up only; once Postgres says BOOKED, the lock no longer matters.</figcaption>
+  </figure>
+  <div class="grid3">
+    <div class="card"><h3>Why a token, not a card number</h3><p>Stripe.js turns card details into a token inside the browser. Our servers only ever see the token, which keeps us out of most PCI compliance work.</p></div>
+    <div class="card"><h3>Why a webhook</h3><p>Payment can be slow or need extra checks (like 3-D Secure). Stripe calls us when it's truly done, carrying the <code>bookingId</code> in its metadata.</p></div>
+    <div class="card"><h3>Why it must be idempotent</h3><p>Stripe may send the same webhook twice. The handler uses <code>bookingId</code> as an idempotency key and checks the status first, so a repeat does nothing.</p></div>
+  </div>
+  <div class="note"><span class="who">What if the lock expires mid-payment?</span>
+    <p>Say I take 11 minutes to pay and someone else grabs my seat at minute 10. Both payments might go through, but Postgres's OCC lets only one "mark as sold" write win. The loser gets an automatic Stripe refund. Annoying, but no double booking. To make it rarer: choose a generous TTL, and extend the lock the moment payment begins.</p></div>
+</section>
+
+<!-- READS -->
+<section id="reads">
+  <div class="head"><span class="eyebrow">Deep dive 3</span><h2>When millions open the same event page</h2>
+    <p class="lede">At 10 a.m. on sale day, everyone loads the same event page. With about 100 reads per write, the read path is where the load lives.</p></div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 900 240" role="img" aria-label="Read path with load balancer, stateless services and cache">
+      <rect x="20" y="90" width="140" height="60" rx="8" class="n"/><text x="90" y="116" text-anchor="middle" class="tl1">Load balancer</text><text x="90" y="134" text-anchor="middle" class="tl2">least conn.</text>
+      <rect x="220" y="20" width="170" height="50" rx="8" class="nt"/><text x="305" y="50" text-anchor="middle" class="tl1">Event Service</text>
+      <rect x="220" y="95" width="170" height="50" rx="8" class="nt"/><text x="305" y="125" text-anchor="middle" class="tl1">Event Service</text>
+      <rect x="220" y="170" width="170" height="50" rx="8" class="nt"/><text x="305" y="200" text-anchor="middle" class="tl1">Event Service</text>
+      <path d="M160 112 L217 45 M160 120 H217 M160 128 L217 195" class="e" marker-end="url(#am)"/>
+      <rect x="460" y="85" width="180" height="70" rx="8" class="na"/><text x="550" y="114" text-anchor="middle" class="tl1">Redis cache</text><text x="550" y="133" text-anchor="middle" class="tl2">eventId → event</text>
+      <path d="M390 45 L457 102 M390 120 H457 M390 195 L457 138" class="ea" marker-end="url(#aa)"/>
+      <rect x="720" y="85" width="160" height="70" rx="8" class="nb"/><text x="800" y="114" text-anchor="middle" class="tl1">PostgreSQL</text><text x="800" y="133" text-anchor="middle" class="tl2">on cache miss</text>
+      <path d="M640 110 H717" class="eb dash" marker-end="url(#ab)"/><text x="678" y="100" text-anchor="middle" class="tb">miss</text>
+      <path d="M800 155 V200 H600 V158" class="ea dash" marker-end="url(#aa)"/>
+      <text x="700" y="222" text-anchor="middle" class="ta">change → invalidate</text>
+    </svg>
+    </div>
+    <figcaption>Event details, performer bios and venue info barely change, so they're cached for a long time. Seat availability changes constantly, so anything about it gets a short TTL. When an event's date or lineup changes, a database trigger tells the cache to drop the old copy.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Piece</th><th>Verdict</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Read-through cache (Redis or Memcached)</td><td><span class="tag great">GREAT</span></td><td>On a miss, read Postgres and fill the cache; later reads never touch the database</td></tr>
+      <tr><td>Load balancing</td><td><span class="tag great">GREAT</span></td><td>Round robin or least connections spreads requests across instances</td></tr>
+      <tr><td>Horizontal scaling</td><td><span class="tag great">GREAT</span></td><td>The Event Service keeps no state, so we just add copies behind the balancer</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This is the same "make the service stateless, put a cache in front of the database" move from my YouTube and LeetCode notes. The new wrinkle is <b>two kinds of data with different freshness needs</b> on one page: the venue never moves, but the seat map changes every second. Giving each its own TTL avoids both a stale map and a hammered database.</p></div>
+</section>
+
+<!-- QUEUE -->
+<section id="queue">
+  <div class="head"><span class="eyebrow">Deep dive 4</span><h2>A waiting room for the Taylor Swift problem</h2>
+    <p class="lede">Caching keeps the page up. But if 10 million people reach the seat map at once, every seat they click is gone a second later. The system works; the experience doesn't.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag good">GOOD</span><h3>Live seat map with SSE</h3><p>Server-Sent Events push "seat 7 taken" to every open map, so nobody clicks a grey seat. Great for normal events; for the biggest ones, seats still vanish faster than you can click.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Virtual waiting queue</h3><p>Put people in line before they see the map, and let them in a batch at a time. The ones inside have a calm, real chance to pick seats. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 300" role="img" aria-label="Virtual waiting queue">
+      <rect x="20" y="100" width="140" height="80" rx="8" class="n"/><text x="90" y="134" text-anchor="middle" class="tl1">Fans</text><text x="90" y="153" text-anchor="middle" class="tl2">millions arrive</text>
+      <path d="M160 140 H217" class="e" marker-end="url(#am)"/>
+      <text x="188" y="130" text-anchor="middle" class="tl2">join</text>
+
+      <rect x="220" y="60" width="250" height="160" rx="8" class="na"/>
+      <text x="345" y="86" text-anchor="middle" class="tl1">Waiting queue</text>
+      <text x="345" y="104" text-anchor="middle" class="tl2">Redis sorted set by join time</text>
+      <rect x="240" y="126" width="28" height="28" rx="4" class="n"/><text x="254" y="145" text-anchor="middle" class="tlb">1</text>
+      <rect x="276" y="126" width="28" height="28" rx="4" class="n"/><text x="290" y="145" text-anchor="middle" class="tlb">2</text>
+      <rect x="312" y="126" width="28" height="28" rx="4" class="n"/><text x="326" y="145" text-anchor="middle" class="tlb">3</text>
+      <rect x="348" y="126" width="28" height="28" rx="4" class="n"/><text x="362" y="145" text-anchor="middle" class="tlb">4</text>
+      <rect x="384" y="126" width="28" height="28" rx="4" class="n"/><text x="398" y="145" text-anchor="middle" class="tlb">5</text>
+      <text x="436" y="145" text-anchor="middle" class="tlb">…</text>
+      <text x="345" y="196" text-anchor="middle" class="tl2">score = join timestamp</text>
+
+      <path d="M470 140 H527" class="ea" marker-end="url(#aa)"/>
+      <text x="498" y="130" text-anchor="middle" class="ta">pop</text>
+      <rect x="530" y="100" width="150" height="80" rx="8" class="nt"/><text x="605" y="134" text-anchor="middle" class="tl1">Admitter</text><text x="605" y="153" text-anchor="middle" class="tl2">lets a batch in</text>
+
+      <rect x="740" y="30" width="180" height="80" rx="8" class="na"/><text x="830" y="64" text-anchor="middle" class="tl1">admitted:{eventId}</text><text x="830" y="83" text-anchor="middle" class="tl2">set with a TTL</text>
+      <path d="M680 125 L737 85" class="et" marker-end="url(#at)"/>
+      <rect x="740" y="170" width="180" height="80" rx="8" class="nt"/><text x="830" y="204" text-anchor="middle" class="tl1">Booking Service</text><text x="830" y="223" text-anchor="middle" class="tl2">checks admitted set</text>
+      <path d="M830 170 V113" class="e dash" marker-end="url(#am)"/>
+
+      <path d="M345 220 V262 H90 V183" class="et dash" marker-end="url(#at)"/>
+      <text x="218" y="282" text-anchor="middle" class="tt">SSE: position + wait time</text>
+    </svg>
+    </div>
+    <figcaption>The admitter runs on a timer, or lets people in as tickets sell. Anyone trying to reserve without being in the admitted set is turned away, so skipping the line through the API doesn't work.</figcaption>
+  </figure>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>This is my LeetCode note's queue turned around: there, the queue protected machines from a burst of jobs; here, it protects <b>people</b> from a burst of other people. Updates only flow one way (server to fan), so SSE is enough; WebSockets, which I needed for WhatsApp's two-way chat, would be overkill. Cloudflare's Waiting Room product shows what this looks like for real: you set a target for total active users and new users per minute, the waiting page refreshes every 20 seconds with an estimated wait, and for a scheduled sale you can open a pre-queue and <b>shuffle everyone at the start time</b>, so refreshing at 9:59:59 gives no edge over joining at 9:50.</p></div>
+</section>
+
+<!-- SEARCH -->
+<section id="search">
+  <div class="head"><span class="eyebrow">Deep dive 5</span><h2>Search that's fast and forgives typos</h2>
+    <p class="lede">The first version searched with <code>LIKE '%Taylor%'</code>. A leading wildcard means the database can't use an index and reads every row. Fine for 100 events, hopeless for millions.</p></div>
+  <div class="grid3">
+    <div class="card"><span class="tag good">GOOD</span><h3>Indexes + tidy queries</h3><p>Index name, date, performer and location; use <code>EXPLAIN</code>, <code>LIMIT</code>, no <code>SELECT *</code>. Still weak at partial matches, and every index slows writes.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Full-text index in Postgres</h3><p><code>tsvector</code> with a GIN index gives real word search inside the database. Costs storage and upkeep, but no new system.</p></div>
+    <div class="card"><span class="tag great">GREAT</span><h3>Elasticsearch + CDC</h3><p>A search engine built on inverted indexes, with fuzzy matching for typos. Kept in sync from Postgres by change data capture. <b>Chosen.</b></p></div>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 300" role="img" aria-label="Search with Elasticsearch fed by CDC">
+      <rect x="20" y="40" width="150" height="64" rx="8" class="nb"/><text x="95" y="67" text-anchor="middle" class="tl1">PostgreSQL</text><text x="95" y="86" text-anchor="middle" class="tl2">source of truth</text>
+      <rect x="230" y="40" width="150" height="64" rx="8" class="na"/><text x="305" y="67" text-anchor="middle" class="tl1">CDC stream</text><text x="305" y="86" text-anchor="middle" class="tl2">every change</text>
+      <path d="M170 72 H227" class="ea" marker-end="url(#aa)"/>
+      <path d="M380 72 H437" class="ea" marker-end="url(#aa)"/>
+
+      <rect x="440" y="20" width="480" height="160" rx="8" class="nb"/>
+      <text x="460" y="46" class="tl1">Elasticsearch inverted index</text>
+      <text x="460" y="80" class="tlb">taylor  →  [e12, e98, e301]</text>
+      <text x="460" y="104" class="tlb">swift   →  [e12, e98]</text>
+      <text x="460" y="128" class="tlb">eras    →  [e12]</text>
+      <text x="460" y="152" class="tlb">dhaka   →  [e77, e140]</text>
+      <text x="900" y="80" text-anchor="end" class="tl2">word → events</text>
+
+      <rect x="20" y="210" width="180" height="64" rx="8" class="nt"/><text x="110" y="237" text-anchor="middle" class="tl1">Search Service</text><text x="110" y="256" text-anchor="middle" class="tl2">"tayler swift"</text>
+      <path d="M200 242 H560 V183" class="eb" marker-end="url(#ab)"/>
+      <text x="380" y="234" text-anchor="middle" class="tb">fuzzy match (1 typo away)</text>
+      <rect x="640" y="214" width="280" height="64" rx="8" class="nt"/><text x="780" y="241" text-anchor="middle" class="tl1">Taylor Swift events</text><text x="780" y="260" text-anchor="middle" class="tl2">target: under 500 ms</text>
+      <path d="M780 180 V211" class="et" marker-end="url(#at)"/>
+    </svg>
+    </div>
+    <figcaption>An inverted index flips the table: instead of "event → its words", it stores "word → the events that contain it", so a query is a few lookups, not a scan. The event IDs here are made up.</figcaption>
+  </figure>
+  <div class="tbox"><table>
+    <thead><tr><th>Making repeat searches faster</th><th>Verdict</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Cache results in Redis or Memcached</td><td><span class="tag good">GOOD</span></td><td>Key built from every search parameter; TTL like 24 hours for a keyword + date query. Invalidation is tricky, especially with fuzzy results.</td></tr>
+      <tr><td>Elasticsearch's own caches + a CDN</td><td><span class="tag great">GREAT</span></td><td>Shard-level filter and request caches inside Elasticsearch; CloudFront caches results near users. Only for results that aren't personalized.</td></tr>
+    </tbody></table></div>
+  <div class="note"><span class="who">Why it works this way</span>
+    <p>Postgres stays the only place we <b>write</b>; Elasticsearch is a read-only copy built for searching. CDC (change data capture) reads the database's own change log and replays every insert, update and delete into the index, so the app never has to remember to "also update search". The cost is a second cluster to run and a short lag before a new event shows up in search, which is fine because search is on the "availability over consistency" side of our requirements.</p></div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="head"><span class="eyebrow">Looking back</span><h2>The decisions, in one place</h2></div>
+  <div class="tbox"><table>
+    <thead><tr><th>Decision</th><th>Alternatives</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><b>One PostgreSQL database</b></td><td>A database per service, NoSQL</td><td>Tickets and bookings must change together in one ACID transaction</td></tr>
+      <tr><td><b>Reserve, then pay</b></td><td>One request with seats + card</td><td>The seat is yours before you type your card number</td></tr>
+      <tr><td><b>Redis lock with a 10-minute TTL</b></td><td>Long DB locks, cron cleanup, expiry-on-read</td><td>Auto-release with no cron; Postgres needs only two states</td></tr>
+      <tr><td><b>OCC on the final write</b></td><td>Trust Redis alone</td><td>A safety net if a lock expires or Redis fails over</td></tr>
+      <tr><td><b>Stripe.js token + idempotent webhook</b></td><td>Card data through our API, synchronous charge</td><td>Out of PCI scope; retries are harmless</td></tr>
+      <tr><td><b>Read-through cache + stateless services</b></td><td>Hit Postgres on every page view</td><td>100:1 reads; static data cached long, availability short</td></tr>
+      <tr><td><b>Virtual waiting queue + SSE</b></td><td>Live seat map only, WebSockets</td><td>Calm, fair access for the biggest sales; updates are one-way</td></tr>
+      <tr><td><b>Elasticsearch fed by CDC</b></td><td><code>LIKE</code> queries, Postgres full-text</td><td>Fast, typo-tolerant, and the app writes only to Postgres</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- SURPRISED -->
+<section id="surprised">
+  <div class="head"><span class="eyebrow">Reflection</span><h2>What surprised me</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>The best cleanup is none</h3><p>I expected a background job to free abandoned seats. Letting the lock's TTL do it means there's no job to crash and nothing to forget.</p></div>
+    <div class="card"><h3>Two locks, on purpose</h3><p>Redis holds the seat, and Postgres still double-checks with OCC. It felt redundant at first; then I read how a Redis failover can briefly hand out a lock twice.</p></div>
+    <div class="card"><h3>The queue is about feelings</h3><p>The waiting room isn't mainly there to save the servers. It's there so the people who get in don't spend ten minutes clicking seats that are already gone.</p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Practice</span><h2>Try it yourself</h2>
+    <p class="lede">Think each one through (or explain it to a friend), then open the answer.</p></div>
+  <div class="qa">
+    <details><summary>Why is search allowed to be slightly stale, but booking isn't?</summary><p>A new event showing up in search a few seconds late hurts nobody. Selling one seat to two people means a refund, an angry fan and a broken promise. So search and viewing favour availability, and booking favours consistency.</p></details>
+    <details><summary>Two people click the same seat in the same millisecond. What happens?</summary><p>Both send <code>SET ticket:id ... NX EX 600</code> to Redis. Redis runs commands one at a time, so one sets the key and gets OK; the other finds the key already there and gets nil. The loser sees "seat just taken".</p></details>
+    <details><summary>Why not keep a <code>SELECT ... FOR UPDATE</code> lock open while the user pays?</summary><p>Payment takes minutes. A transaction open that long holds locks, piles up contention and risks deadlocks, and an abandoned or crashed session can keep the seat locked. Short transactions plus a TTL lock avoid all of that.</p></details>
+    <details><summary>Stripe sends the "payment succeeded" webhook twice. What stops a double update?</summary><p>The handler is idempotent: it uses <code>bookingId</code> as the key and checks the booking's status first. If it's already confirmed, the second call does nothing.</p></details>
+    <details><summary>A fan pays at minute 11, after their 10-minute lock expired and someone else grabbed the seat. Now what?</summary><p>Only one "mark sold" write can succeed in Postgres thanks to OCC. The other buyer's payment is refunded automatically. Generous TTLs and extending the lock when payment starts make this rare.</p></details>
+    <details><summary>Why use change data capture instead of having the app write to both Postgres and Elasticsearch?</summary><p>Dual writes drift: if one write fails, the two stores disagree. CDC reads Postgres's own change log, so every committed change reaches the index and the app only has one place to write.</p></details>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="head"><span class="eyebrow">Connections</span><h2>Concepts used and labs for later</h2></div>
+  <div class="grid3">
+    <div class="card"><h3>Concepts used</h3><ul>
+      <li>Consistency vs availability per feature</li>
+      <li>ACID transactions and OCC</li>
+      <li>Distributed locks with TTL (<code>SET NX EX</code>)</li>
+      <li>Idempotent webhooks</li>
+      <li>Read-through caching and invalidation</li>
+      <li>Redis sorted sets as a queue</li>
+      <li>Server-Sent Events vs WebSockets</li>
+      <li>Inverted indexes and CDC</li></ul></div>
+    <div class="card wide"><h3>Try later in Docker</h3>
+      <ul class="check">
+        <li><input type="checkbox" id="l1"><label for="l1">In <code>redis-cli</code>, run <code>SET seat:7 A NX EX 30</code> then <code>SET seat:7 B NX EX 30</code> and watch the second fail; check <code>TTL seat:7</code></label></li>
+        <li><input type="checkbox" id="l2"><label for="l2">Write the check-then-delete Lua release script and prove B can't delete A's lock</label></li>
+        <li><input type="checkbox" id="l3"><label for="l3">Postgres: an OCC update with <code>WHERE status = 'AVAILABLE'</code> from two terminals; only one row changes</label></li>
+        <li><input type="checkbox" id="l4"><label for="l4">Laravel + Stripe CLI: <code>stripe listen</code>, then resend a webhook and make the handler idempotent</label></li>
+        <li><input type="checkbox" id="l5"><label for="l5">Waiting queue: <code>ZADD queue:e1 &lt;time&gt; user</code>, pop a batch with <code>ZPOPMIN</code>, and stream position over SSE</label></li>
+        <li><input type="checkbox" id="l6"><label for="l6">Elasticsearch: index a few events and search "tayler swift" with <code>fuzziness: "AUTO"</code></label></li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">Self-check</span><h2>Draw it from memory</h2>
+    <p class="lede">Close this page, take a blank sheet, and tick each one only if you drew it without peeking.</p></div>
+  <ul class="check">
+    <li><input type="checkbox" id="c1"><label for="c1">Gateway → Event / Search / Booking services → Postgres, Redis, Elasticsearch, Stripe</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">The seat state machine: AVAILABLE → RESERVED (TTL) → BOOKED</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">Two buyers racing on <code>SET NX</code>, and why only one wins</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">The 10-step checkout with Stripe.js and the webhook</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">The waiting queue: sorted set, admitter, admitted set, SSE</label></li>
+    <li><input type="checkbox" id="c6"><label for="c6">Postgres → CDC → Elasticsearch inverted index</label></li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Where I learned this:</b> <a href="https://www.hellointerview.com/learn/system-design/problem-breakdowns/ticketmaster" target="_blank" rel="noopener">Hello Interview's Ticketmaster breakdown</a>, plus <a href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/" target="_blank" rel="noopener">Distributed Locks with Redis</a> on redis.io and <a href="https://developers.cloudflare.com/waiting-room/about" target="_blank" rel="noopener">Cloudflare's Waiting Room docs</a>. The scale numbers are rough targets for learning.</p>
+  <p>Part of the <b>Learning Lab</b> by Asfak Shahrier.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.check input');
+  boxes.forEach(function(b){
+    try{ if(localStorage.getItem('tm-'+b.id)==='1') b.checked=true; }catch(e){}
+    b.addEventListener('change',function(){ try{ localStorage.setItem('tm-'+b.id,b.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
+
+</body>
+</html>

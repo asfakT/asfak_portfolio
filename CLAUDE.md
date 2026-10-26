@@ -21,7 +21,7 @@ design tokens, data fields, routes or deployment, update this file in the same c
 | Tool | Purpose |
 |---|---|
 | React 19 + Vite | UI and build |
-| react-router-dom 7 | Routes: `/`, `/projects`, `/certificates`, `/blog` |
+| react-router-dom 7 | Routes: `/`, `/projects`, `/certificates`, `/blog`, `/lab` |
 | Tailwind CSS 3 (NOT v4) | Styling. Do not use v4-only syntax |
 | Framer Motion 12 | Scroll reveal, hero load-in, stat count-up |
 | react-icons 5 | Icons (Fi = Feather, Fa = Font Awesome, Si = Simple Icons) |
@@ -50,24 +50,25 @@ api/
   chat.js                   Chatbot (Groq). Holds the PROFILE text the bot answers from. Needs GROQ_API_KEY
   hello.js                  Test endpoint
 public/                     favicon.png, apple-touch-icon.png, resume.pdf, certs/, papers/, achievements/
+  lab/<topic>/<slug>.html   Learning Lab pages: standalone HTML (own CSS, light theme), served as static files
 docs/                       DEPLOYMENT.md, CONTINUE-PROMPT.md, ai-chatbot-plan.md
 src/
   main.jsx                  React root, MotionConfig reducedMotion="user"
   App.jsx                   Router, routes, Navbar, SocialRail, ScrollButton, ChatWidget
   index.css                 Tailwind layers, CSS variables, scrollbar/selection, chat markdown styles
-  pages/                    HomePage (all sections), ProjectsPage, CertificatesPage, BlogPage
+  pages/                    HomePage (all sections), ProjectsPage, CertificatesPage, BlogPage, LabPage
   hooks/useModalDismiss.js  Esc / outside-click close for modals
   data/                     ALL CONTENT (see Data files)
   assets/                   hero_portrait.webp, logo.png, project banners, about image
   components/
     Navbar/                 Floating navbar with dropdowns
     Hero/                   Hero.jsx, HeroStats.jsx
-    About/ Experience/ Projects/ Skills/ Research/ Achievements/ Certificates/ Blog/ Contact/
+    About/ Experience/ Projects/ Skills/ Research/ Achievements/ Certificates/ Blog/ Lab/ Contact/
     Chat/ChatWidget.jsx     Floating chat button + panel
     ui/                     Shared pieces (see Components)
 ```
 
-Home page order (`HomePage.jsx`): Hero, About, Experience, Projects, Skills, Research, Achievements, Certificates, Blog, Contact.
+Home page order (`HomePage.jsx`): Hero, About, Experience, Projects, Skills, Research, Achievements, Certificates, Blog, Learning Lab, Contact.
 Sections are separated by a 1px divider and share the `--bg-base` background.
 
 ---
@@ -125,7 +126,7 @@ Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, 
 
 ## Sections and pages
 
-- **Navbar:** floating bar, height 68px. Links: Home, About, Experience (dropdown: Work Experience, Training Program, Competitive Programming), Projects, Skills, Research, More (dropdown: Achievements, Certificates, Blog), Contact, Hire Me. Active link = copper underline drawn left to right; hover = peach underline. Experience dropdown items switch the Experience tab via the `experience-tab` event. On other routes, links navigate home first (`state.scrollTo`).
+- **Navbar:** floating bar, height 68px. Links: Home, About, Experience (dropdown: Work Experience, Training Program, Competitive Programming), Projects, Skills, Research, Recognition (dropdown: Achievements, Certificates), Learn (dropdown: Learning Lab, Articles = the Blog section), Contact, Hire Me. Active link = copper underline drawn left to right; hover = peach underline. Experience dropdown items switch the Experience tab via the `experience-tab` event. On other routes, links navigate home first (`state.scrollTo`).
 - **Hero:** portrait on the right (`hero_portrait.webp`), name "Asfak Shahrier", 5 roles, tagline, View Projects / Get In Touch / Resume buttons, bottom row with GitHub, LinkedIn, Medium and email. Then `HeroStats`: 3600+ problems, 2+ years, 2 papers.
 - **About:** photo, bio, 2x2 info grid, three education columns.
 - **Experience:** 3 tabs (Work, Training, Competitive Programming). Work and training are accordions; CP is a grid of platform cards plus stats.
@@ -134,7 +135,8 @@ Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, 
 - **Research:** paper rows (year, status, details, thumbnail, Read Paper link) and a research-interests list.
 - **Achievements:** achievements grid, onsite contest results table, photo gallery.
 - **Certificates:** `CardSlider` of `CertCard`s, preview modal, "View All" to `/certificates` (category filter + search).
-- **Blog:** `CardSlider` of Medium posts, "View All" to `/blog`.
+- **Blog:** `CardSlider` of Medium posts, "View All" to `/blog`. Shown as "Articles" in the navbar.
+- **Learning Lab (`#lab`, section 10):** the 3 newest entries as compact `LabCard`s (title, 2-line summary, read time), "View All" to `/lab`. `/lab` is an index list of `LabRow`s (number, title, one-line summary, topic, read time) with a topic filter (with counts), search, and pagination (10 per page). Entries link to the static pages in `public/lab/`.
 - **Contact:** big email link, Open-to rows, social rows, footer with quick links.
 - **Chat:** `ChatWidget` posts to `/api/chat` with the last 6 messages. Supports voice in and read-aloud. Rate limit 10 requests per minute per IP (in memory).
 
@@ -151,6 +153,7 @@ Removed (do not recreate): Swiper, SectionWrapper, SectionTitle, Button, Badge, 
 | `achievements.js` | `achievements`, `certifications`, `contestHistory`, `contestGallery` |
 | `certificates.js` | `certificates`: id, title, issuer, date, category, imageUrl, credentialUrl, description |
 | `blog.js` | `blogPosts`: id, title, excerpt, date, readTime, tags, url, image |
+| `lab.js` | `labSubtitle`, `labItems` (newest first): id, title, summary, topic, date, readTime, url (`/lab/<topic>/<slug>.html`) |
 
 If a field is optional (for example paper `venue`), the UI must skip it when empty.
 
@@ -192,6 +195,7 @@ Update all of these together: `src/data/*`, `Hero.jsx`/`HeroStats.jsx`, `About.j
 
 - **Add a section:** create `src/components/Name/Name.jsx` using `<EditorialSection id="name">` and `<SectionHeader number label title titleEm subtitle />`; add its data in `src/data/`; add it to `HomePage.jsx` (with a divider) and a link in `navLinks` in `Navbar.jsx`.
 - **Add a project / certificate / blog post / paper:** add an object to the matching array in `src/data/`.
+- **Add a Learning Lab entry:** put the HTML page in `public/lab/<topic>/` and add an object at the top of `labItems` in `src/data/lab.js`. A new `topic` value adds a filter button automatically.
 - **Change photos:** hero is `src/assets/hero_portrait.webp`, logo is `src/assets/logo.png`, favicon files are in `public/`.
 - **Update contact links:** `Contact.jsx` (`socialLinks`), `SocialRail.jsx` (`links`), `Hero.jsx` (`socials`), `Navbar.jsx` (Hire Me mailto).
 - **Update what the chatbot knows:** edit the `PROFILE` string in `api/chat.js` and redeploy.
